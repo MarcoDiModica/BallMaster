@@ -26,6 +26,15 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Deliverable_2/Scenes/UDP/Lab2_WaitingRoomUDP.unity
     guid: 67e663528473d874c9996377815800a8
+  - enabled: 1
+    path: Assets/BallMaster/Escenas/Main_Menu.unity
+    guid: 59c2df556a167304dbb095af0508f23b
+  - enabled: 1
+    path: Assets/BallMaster/Escenas/Map_Selection.unity
+    guid: 5fa30dcd135ba1f4998cfdbe50a9c915
+  - enabled: 1
+    path: Assets/BallMaster/Escenas/Map_1.unity
+    guid: 8e512118a77529a43abda1bb5951981c
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0
