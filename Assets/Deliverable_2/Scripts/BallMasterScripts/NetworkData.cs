@@ -138,7 +138,7 @@ public static class NetworkProtocol
 
         try
         {
-            string[] objectStrings = payload.Splut(OBJECT_DELIM);
+            string[] objectStrings = payload.Split(OBJECT_DELIM);
 
             foreach (string objStr in objectStrings)
             {
