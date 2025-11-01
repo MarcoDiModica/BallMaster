@@ -35,6 +35,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/BallMaster/Escenas/Map_1.unity
     guid: 8e512118a77529a43abda1bb5951981c
+  - enabled: 1
+    path: Assets/BallMaster/Escenas/Map_2.unity
+    guid: d1fa66b1612b9454f9e91d59ae73c881
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

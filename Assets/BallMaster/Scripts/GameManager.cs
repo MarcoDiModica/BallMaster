@@ -10,6 +10,15 @@ public class GameManager : MonoBehaviour
         SceneManager.LoadSceneAsync("Map_Selection");
     }
 
+    public void LoadMap_1()
+    {
+        SceneManager.LoadSceneAsync("Map_1");
+    }
+    public void LoadMap_2()
+    {
+        SceneManager.LoadSceneAsync("Map_2");
+    }
+
     public void QuitGame()
     {
         Application.Quit();
