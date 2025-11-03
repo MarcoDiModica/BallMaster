@@ -1,6 +1,5 @@
 using UnityEngine;
 using System.Collections.Generic;
-using UnityEngine;
 using System.Linq;
 
 public class NetworkObjectManager : MonoBehaviour
@@ -21,7 +20,7 @@ public class NetworkObjectManager : MonoBehaviour
             return;
         }
 
-        networkObjects = FindObjectsOfType<NetworkObject>().ToDictionary(obj => obj.objectId, obj => obj);
+        networkObjects = FindObjectsByType<NetworkObject>(FindObjectsSortMode.None).ToDictionary(obj => obj.objectId, obj => obj);
     
         Debug.Log($"NetworkObjectManager initialized with {networkObjects.Count} objects.");
     }

@@ -6,27 +6,6 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Deliverable_2/Scenes/Lab2_MainMenu.unity
-    guid: 3cc03ac254496c84393192938a3a5b13
-  - enabled: 1
-    path: Assets/Deliverable_2/Scenes/TCP/Lab2_ServerTCP.unity
-    guid: 81af65929010b0c40922cc68d5dea4e5
-  - enabled: 1
-    path: Assets/Deliverable_2/Scenes/TCP/Lab2_ClientTCP.unity
-    guid: 62ff211b72fc9e840836cf8beff29b64
-  - enabled: 1
-    path: Assets/Deliverable_2/Scenes/TCP/Lab2_WaitingRoomTCP.unity
-    guid: bbe256a10df43f04fa0fd5a4f6a891ae
-  - enabled: 1
-    path: Assets/Deliverable_2/Scenes/UDP/Lab2_ServerUDP.unity
-    guid: 141e07684b8ba654aa05dfc8bd9d31d3
-  - enabled: 1
-    path: Assets/Deliverable_2/Scenes/UDP/Lab2_ClientUDP.unity
-    guid: ff8f32b1eecc253408e0f71c6a90de26
-  - enabled: 1
-    path: Assets/Deliverable_2/Scenes/UDP/Lab2_WaitingRoomUDP.unity
-    guid: 67e663528473d874c9996377815800a8
-  - enabled: 1
     path: Assets/BallMaster/Escenas/Main_Menu.unity
     guid: 59c2df556a167304dbb095af0508f23b
   - enabled: 1
