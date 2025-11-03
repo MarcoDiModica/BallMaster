@@ -27,6 +27,6 @@ public class PlayerControllerUDP : MonoBehaviour
             vertical = v,
         };
 
-        // client.SendPlayerInput(inputData); 
+        // client.SendPlayerInput(inputData);  alguna función nueva se necesita hacer en UPDClient
     }
 }
