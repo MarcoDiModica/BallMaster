@@ -212,6 +212,11 @@ public class NetworkManager : MonoBehaviour
             case MessageType.SyncExistingPlayers:
                 if (!isHost) HandleSyncExistingPlayers(data);
                 break;
+            case MessageType.PlayerShoot:
+                if (isHost) HandlePlayerShoot(data);
+                break;
+
+
         }
     }
 
@@ -305,6 +310,19 @@ public class NetworkManager : MonoBehaviour
             if (PlayerManager.Instance != null)
             {
                 PlayerManager.Instance.SpawnExistingPlayers(playersData);
+            }
+        });
+    }
+
+    void HandlePlayerShoot(byte[] data)
+    {
+        PlayerShootData shootData = NetworkProtocolBinary.DeserializePlayerShoot(data);
+
+        UnityMainThread.ExecuteInUpdate(() =>
+        {
+            if (PlayerManager.Instance != null)
+            {
+                PlayerManager.Instance.HandlePlayerShoot(shootData.playerId);
             }
         });
     }
@@ -475,6 +493,16 @@ public class NetworkManager : MonoBehaviour
         else
         {
             SendToHost(data);
+        }
+    }
+
+    public void SendPlayerShoot(string playerId)
+    {
+        if (isConnected && !isHost)
+        {
+            PlayerShootData data = new PlayerShootData { playerId = playerId };
+            byte[] bytes = NetworkProtocolBinary.SerializePlayerShoot(data);
+            SendToHost(bytes);
         }
     }
 

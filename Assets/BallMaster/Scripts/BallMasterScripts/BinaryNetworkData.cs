@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using System.Collections.Generic;
 using UnityEngine;
+using Unity.VisualScripting;
 
 public enum MessageType : byte
 {
@@ -12,7 +13,8 @@ public enum MessageType : byte
     GameState,
     StartGame,
     AssignPlayerId,
-    SyncExistingPlayers
+    SyncExistingPlayers,
+    PlayerShoot
 }
 
 public class PlayerTransformData
@@ -44,6 +46,11 @@ public class ObjectState
 public class GameStateData
 {
     public List<ObjectState> objects = new List<ObjectState>();
+}
+
+public class PlayerShootData
+{
+    public string playerId;
 }
 
 public static class NetworkProtocolBinary
@@ -112,6 +119,14 @@ public static class NetworkProtocolBinary
                 WriteVector3(writer, obj.position);
                 WriteQuaternion(writer, obj.rotation);
             }
+        });
+    }
+
+    public static byte[] SerializePlayerShoot(PlayerShootData shootData)
+    {
+        return Serialize(MessageType.PlayerShoot, (writer) =>
+        {
+            writer.Write(shootData.playerId);
         });
     }
 
@@ -191,6 +206,19 @@ public static class NetworkProtocolBinary
             }
         }
         return state;
+    }
+
+    public static PlayerShootData DeserializePlayerShoot(byte[] data)
+    {
+        using (MemoryStream stream = new MemoryStream(data))
+        using (BinaryReader reader = new BinaryReader(stream))
+        {
+            reader.ReadByte();
+            return new PlayerShootData
+            {
+                playerId = reader.ReadString()
+            };
+        }
     }
 
     private static void WriteVector3(BinaryWriter writer, Vector3 v)

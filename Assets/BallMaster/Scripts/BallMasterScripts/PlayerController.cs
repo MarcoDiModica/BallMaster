@@ -25,6 +25,8 @@ public class PlayerController : MonoBehaviour
     private float lastJumpPressedTime = -1f; 
     private bool isJumping = false;
 
+    public float shootForce = 20f;
+
     void Awake()
     {
         controller = GetComponent<CharacterController>();
@@ -41,8 +43,8 @@ public class PlayerController : MonoBehaviour
     public void SetAsLocalPlayer()
     {
         isLocalPlayer = true;
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        //Cursor.lockState = CursorLockMode.Locked;
+        //Cursor.visible = false;
         
         if (cameraTransform != null)
             cameraTransform.gameObject.SetActive(true);
@@ -123,6 +125,21 @@ public class PlayerController : MonoBehaviour
         velocity.y += gravity * Time.deltaTime;
         
         controller.Move(velocity * Time.deltaTime);
+
+        if (Time.time >= nextSendTime && NetworkManager.Instance != null)
+        {
+            NetworkManager.Instance.SendPlayerTransform(
+                networkObject.objectId,
+                transform.position,
+                transform.rotation
+            );
+            nextSendTime = Time.time + networkSendRate;
+        }
+
+        if (Mouse.current.leftButton.wasPressedThisFrame)
+        {
+            NetworkManager.Instance.SendPlayerShoot(networkObject.objectId);
+        }
 
         if (Time.time >= nextSendTime && NetworkManager.Instance != null)
         {

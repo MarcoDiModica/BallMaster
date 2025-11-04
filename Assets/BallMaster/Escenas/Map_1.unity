@@ -1134,6 +1134,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerManager
   playerPrefab: {fileID: 6600956380747670767, guid: dd78d9859eb0cce4a9c81e2fd49dbe4e, type: 3}
+  ballPrefab: {fileID: 5595115736996512273, guid: 8bf7341218e0ee14fa97719cf8b3a74a, type: 3}
   spawnPoints:
   - {fileID: 1868062116}
   - {fileID: 1188579284}
@@ -1163,7 +1164,7 @@ GameObject:
   m_Component:
   - component: {fileID: 459006769}
   m_Layer: 0
-  m_Name: HIJOS DE PUTA ORDENAD LA ESCENA
+  m_Name: Assets
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5489,6 +5490,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c3d5af417495bd24283c73b8e88c9b18, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NetworkObjectManager
+  playerPrefab: {fileID: 6600956380747670767, guid: dd78d9859eb0cce4a9c81e2fd49dbe4e, type: 3}
+  ballPrefab: {fileID: 5595115736996512273, guid: 8bf7341218e0ee14fa97719cf8b3a74a, type: 3}
 --- !u!4 &2009528218
 Transform:
   m_ObjectHideFlags: 0

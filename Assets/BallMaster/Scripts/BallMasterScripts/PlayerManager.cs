@@ -6,10 +6,12 @@ public class PlayerManager : MonoBehaviour
     public static PlayerManager Instance;
 
     public GameObject playerPrefab;
+    public GameObject ballPrefab;
     public Transform[] spawnPoints;
 
     private Dictionary<string, PlayerController> players = new Dictionary<string, PlayerController>();
     private int nextPlayerId = 0;
+    private int nextBallId = 0;
     private string myPlayerId = "";
 
     void Awake()
@@ -126,8 +128,38 @@ public class PlayerManager : MonoBehaviour
         }
     }
 
+    public void HandlePlayerShoot(string playerId)
+    {
+        if (!NetworkManager.Instance.isHost) return;
+        if (!players.ContainsKey(playerId)) return;
+
+        PlayerController shooter = players[playerId];
+        Transform shooterCam = shooter.cameraTransform;
+
+        string ballId = $"ball_{nextBallId++}";
+
+        Vector3 spawnPos = shooterCam.position + shooterCam.forward;
+        GameObject ballObj = Instantiate(ballPrefab, spawnPos, shooterCam.rotation);
+    
+        NetworkObject netObj = ballObj.GetComponent<NetworkObject>();
+        netObj.objectId = ballId;
+
+        NetworkObjectManager.Instance.RegisterNetworkObject(netObj);
+
+        Rigidbody rb = ballObj.GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.AddForce(shooterCam.forward * shooter.shootForce, ForceMode.Impulse);
+        }
+    }
+
     public Dictionary<string, PlayerController> GetAllPlayers()
     {
         return players;
+    }
+
+    public string GetMyPlayerId()
+    {
+        return myPlayerId;
     }
 }
