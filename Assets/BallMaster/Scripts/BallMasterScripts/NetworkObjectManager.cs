@@ -20,14 +20,54 @@ public class NetworkObjectManager : MonoBehaviour
             return;
         }
 
-        networkObjects = FindObjectsByType<NetworkObject>(FindObjectsSortMode.None).ToDictionary(obj => obj.objectId, obj => obj);
+        RefreshNetworkObjects();
     
         Debug.Log($"NetworkObjectManager initialized with {networkObjects.Count} objects.");
     }
 
-    public void ApplyGameState(GameStateData_B state)
+    public void RefreshNetworkObjects()
     {
-        foreach (ObjectState_B objState in state.objects)
+        NetworkObject[] objects = FindObjectsByType<NetworkObject>(FindObjectsSortMode.None);
+        networkObjects.Clear();
+        
+        foreach (var obj in objects)
+        {
+            if (!string.IsNullOrEmpty(obj.objectId))
+            {
+                networkObjects[obj.objectId] = obj;
+            }
+        }
+        
+        Debug.Log($"Refreshed NetworkObjectManager: {networkObjects.Count} objects tracked.");
+    }
+
+    public void RegisterNetworkObject(NetworkObject obj)
+    {
+        if (obj == null || string.IsNullOrEmpty(obj.objectId))
+        {
+            Debug.LogWarning("Attempted to register invalid NetworkObject");
+            return;
+        }
+
+        if (!networkObjects.ContainsKey(obj.objectId))
+        {
+            networkObjects[obj.objectId] = obj;
+            Debug.Log($"Registered NetworkObject: {obj.objectId}");
+        }
+    }
+
+    public void UnregisterNetworkObject(string objectId)
+    {
+        if (networkObjects.ContainsKey(objectId))
+        {
+            networkObjects.Remove(objectId);
+            Debug.Log($"Unregistered NetworkObject: {objectId}");
+        }
+    }
+
+    public void ApplyGameState(GameStateData state)
+    {
+        foreach (ObjectState objState in state.objects)
         {
             if (networkObjects.ContainsKey(objState.objectId))
             {
@@ -35,10 +75,18 @@ public class NetworkObjectManager : MonoBehaviour
             }
             else
             {
-                // instanciar un objeto?
-                Debug.LogWarning($"NetworkObject with ID {objState.objectId} not found.");
+                Debug.LogWarning($"NetworkObject with ID {objState.objectId} not found in tracked objects.");
             }
         }
+    }
 
+    public NetworkObject GetNetworkObject(string objectId)
+    {
+        return networkObjects.ContainsKey(objectId) ? networkObjects[objectId] : null;
+    }
+
+    public int GetTrackedObjectCount()
+    {
+        return networkObjects.Count;
     }
 }

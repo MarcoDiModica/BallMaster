@@ -37,7 +37,7 @@ public class GameUI : MonoBehaviour
         {
             if (NetworkManager.Instance.isHost)
             {
-                codeText.text = "Código: " + NetworkManager.Instance.lobbyCode;
+                codeText.text = NetworkManager.Instance.lobbyCode;
             }
             else
             {

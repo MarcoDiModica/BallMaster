@@ -6,6 +6,8 @@ public class NetworkObject : MonoBehaviour
     private Vector3 targetPosition;
     private Quaternion targetRotation;
     public float interpolationSpeed = 15f;
+    private PlayerController playerController;
+    private bool checkedForPlayer = false;
 
     void Awake()
     {
@@ -21,7 +23,13 @@ public class NetworkObject : MonoBehaviour
 
     void Update()
     {
-        if (NetworkManager.Instance != null && NetworkManager.Instance.isHost)
+        if (!checkedForPlayer)
+        {
+            playerController = GetComponent<PlayerController>();
+            checkedForPlayer = true;
+        }
+
+        if (playerController != null && playerController.IsLocalPlayer())
         {
             return;
         }

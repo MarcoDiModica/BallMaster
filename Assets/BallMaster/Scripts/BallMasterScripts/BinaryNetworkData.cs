@@ -4,31 +4,46 @@ using System.Text;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum MessageType_B : byte
+public enum MessageType : byte
 {
     Join,
     Chat,
-    PlayerInput,
+    PlayerTransform,
     GameState,
-    StartGame
+    StartGame,
+    AssignPlayerId,
+    SyncExistingPlayers
 }
 
-public class PlayerInputData_B
+public class PlayerTransformData
 {
-    public float horizontal;
-    public float vertical;
+    public string playerId;
+    public Vector3 position;
+    public Quaternion rotation;
 }
 
-public class ObjectState_B
+public class ExistingPlayerData
+{
+    public string playerId;
+    public Vector3 position;
+    public Quaternion rotation;
+}
+
+public class ExistingPlayersData
+{
+    public List<ExistingPlayerData> players = new List<ExistingPlayerData>();
+}
+
+public class ObjectState
 {
     public string objectId;
     public Vector3 position;
     public Quaternion rotation;
 }
 
-public class GameStateData_B
+public class GameStateData
 {
-    public List<ObjectState_B> objects = new List<ObjectState_B>();
+    public List<ObjectState> objects = new List<ObjectState>();
 }
 
 public static class NetworkProtocolBinary
@@ -43,7 +58,7 @@ public static class NetworkProtocolBinary
             return stream.ToArray();
         }
     }
-    
+
     public static byte[] SerializeString(MessageType type, string message)
     {
         return Serialize(type, (writer) =>
@@ -52,16 +67,40 @@ public static class NetworkProtocolBinary
         });
     }
 
-    public static byte[] SerializeInput(PlayerInputData_B input)
+    public static byte[] SerializePlayerId(string playerId)
     {
-        return Serialize(MessageType.PlayerInput, (writer) =>
+        return Serialize(MessageType.AssignPlayerId, (writer) =>
         {
-            writer.Write(input.horizontal);
-            writer.Write(input.vertical);
+            writer.Write(playerId);
         });
     }
 
-    public static byte[] SerializeGameState(GameStateData_B gameState)
+    public static byte[] SerializePlayerTransform(PlayerTransformData transform)
+    {
+        return Serialize(MessageType.PlayerTransform, (writer) =>
+        {
+            writer.Write(transform.playerId);
+            WriteVector3(writer, transform.position);
+            WriteQuaternion(writer, transform.rotation);
+        });
+    }
+
+    public static byte[] SerializeExistingPlayers(ExistingPlayersData playersData)
+    {
+        return Serialize(MessageType.SyncExistingPlayers, (writer) =>
+        {
+            writer.Write(playersData.players.Count);
+
+            foreach (var player in playersData.players)
+            {
+                writer.Write(player.playerId);
+                WriteVector3(writer, player.position);
+                WriteQuaternion(writer, player.rotation);
+            }
+        });
+    }
+
+    public static byte[] SerializeGameState(GameStateData gameState)
     {
         return Serialize(MessageType.GameState, (writer) =>
         {
@@ -72,25 +111,15 @@ public static class NetworkProtocolBinary
                 writer.Write(obj.objectId);
                 WriteVector3(writer, obj.position);
                 WriteQuaternion(writer, obj.rotation);
-
-                /*writer.Write(obj.objectId);
-                writer.Write(obj.position.x);
-                writer.Write(obj.position.y);
-                writer.Write(obj.position.z);
-                writer.Write(obj.rotation.x);
-                writer.Write(obj.rotation.y);
-                writer.Write(obj.rotation.z);
-                writer.Write(obj.rotation.w);*/
             }
         });
     }
-    
-  
+
     public static MessageType PeekHeader(byte[] data)
     {
         if (data == null || data.Length == 0)
         {
-            return (MessageType)(-1);
+            return unchecked((MessageType)(-1));
         }
         return (MessageType)data[0];
     }
@@ -105,23 +134,46 @@ public static class NetworkProtocolBinary
         }
     }
 
-    public static PlayerInputData_B DeserializeInput(byte[] data)
+    public static PlayerTransformData DeserializePlayerTransform(byte[] data)
     {
         using (MemoryStream stream = new MemoryStream(data))
         using (BinaryReader reader = new BinaryReader(stream))
         {
             reader.ReadByte();
-            return new PlayerInputData_B
+            return new PlayerTransformData
             {
-                horizontal = reader.ReadSingle(),
-                vertical = reader.ReadSingle()
+                playerId = reader.ReadString(),
+                position = ReadVector3(reader),
+                rotation = ReadQuaternion(reader)
             };
         }
     }
 
-    public static GameStateData_B DeserializeGameState(byte[] data)
+    public static ExistingPlayersData DeserializeExistingPlayers(byte[] data)
     {
-        GameStateData_B state = new GameStateData_B();
+        ExistingPlayersData playersData = new ExistingPlayersData();
+        using (MemoryStream stream = new MemoryStream(data))
+        using (BinaryReader reader = new BinaryReader(stream))
+        {
+            reader.ReadByte();
+            int playerCount = reader.ReadInt32();
+
+            for (int i = 0; i < playerCount; i++)
+            {
+                playersData.players.Add(new ExistingPlayerData
+                {
+                    playerId = reader.ReadString(),
+                    position = ReadVector3(reader),
+                    rotation = ReadQuaternion(reader)
+                });
+            }
+        }
+        return playersData;
+    }
+
+    public static GameStateData DeserializeGameState(byte[] data)
+    {
+        GameStateData state = new GameStateData();
         using (MemoryStream stream = new MemoryStream(data))
         using (BinaryReader reader = new BinaryReader(stream))
         {
@@ -130,7 +182,7 @@ public static class NetworkProtocolBinary
 
             for (int i = 0; i < objectCount; i++)
             {
-                state.objects.Add(new ObjectState_B
+                state.objects.Add(new ObjectState
                 {
                     objectId = reader.ReadString(),
                     position = ReadVector3(reader),
@@ -165,8 +217,4 @@ public static class NetworkProtocolBinary
     {
         return new Quaternion(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
     }
-
 }
-
-
-

@@ -10,21 +10,20 @@ public class NetworkManager : MonoBehaviour
     public static NetworkManager Instance;
 
     [Header("Config")]
-    public int port = 7777;
+    public int port = 4567;
     public float syncRate = 0.1f;
 
     public bool isHost = false;
     public bool isConnected = false;
     public string lobbyCode = "";
-    
-    private static Dictionary<string, string> codeToIPMap = new Dictionary<string, string>();
 
+    private static Dictionary<string, string> codeToIPMap = new Dictionary<string, string>();
     private Dictionary<string, IPEndPoint> connectedClients = new Dictionary<string, IPEndPoint>();
+    private Dictionary<string, IPEndPoint> clientIdToEndpoint = new Dictionary<string, IPEndPoint>();
     private UdpClient udpClient;
     private Thread receiveThread;
     private bool running = false;
     private IPEndPoint hostEndPoint;
-    private float lastSyncTime = 0;
 
     void Awake()
     {
@@ -41,14 +40,9 @@ public class NetworkManager : MonoBehaviour
 
     void Update()
     {
-        if (isHost && isConnected)
+        if (isHost && isConnected && connectedClients.Count > 0)
         {
-            lastSyncTime += Time.deltaTime;
-            if (lastSyncTime >= syncRate)
-            {
-                lastSyncTime = 0;
-                SyncGameState();
-            }
+            SyncGameState();
         }
     }
 
@@ -62,17 +56,16 @@ public class NetworkManager : MonoBehaviour
         codeToIPMap[lobbyCode] = ip;
         StartUDP(port);
         isConnected = true;
-        Debug.Log("Host iniciado. Código: " + lobbyCode);
     }
 
     void SyncGameState()
     {
-        GameStateData_B state = new GameStateData_B();
+        GameStateData state = new GameStateData();
         NetworkObject[] objects = FindObjectsByType<NetworkObject>(FindObjectsSortMode.None);
 
         foreach (NetworkObject obj in objects)
         {
-            state.objects.Add(new ObjectState_B
+            state.objects.Add(new ObjectState
             {
                 objectId = obj.objectId,
                 position = obj.transform.position,
@@ -99,6 +92,23 @@ public class NetworkManager : MonoBehaviour
         }
     }
 
+    void SendToAllClientsExcept(byte[] data, IPEndPoint except)
+    {
+        foreach (var client in connectedClients.Values)
+        {
+            if (client.Equals(except)) continue;
+            
+            try
+            {
+                udpClient.Send(data, data.Length, client);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("Error enviando: " + e.Message);
+            }
+        }
+    }
+
     #endregion
 
     #region Client
@@ -106,11 +116,11 @@ public class NetworkManager : MonoBehaviour
     public void JoinHost(string code)
     {
         isHost = false;
-        
+
         try
         {
             string hostIP;
-            
+
             if (codeToIPMap.ContainsKey(code))
             {
                 hostIP = codeToIPMap[code];
@@ -119,12 +129,11 @@ public class NetworkManager : MonoBehaviour
             {
                 hostIP = DecodeIPFromCode(code);
             }
-            
+
             hostEndPoint = new IPEndPoint(IPAddress.Parse(hostIP), port);
             StartUDP(0);
             SendJoinMessage(code);
             isConnected = true;
-            Debug.Log("Conectado a: " + hostIP);
         }
         catch (Exception e)
         {
@@ -154,7 +163,7 @@ public class NetworkManager : MonoBehaviour
     {
         udpClient = new UdpClient(portToUse);
         running = true;
-        
+
         receiveThread = new Thread(ReceiveData);
         receiveThread.IsBackground = true;
         receiveThread.Start();
@@ -181,18 +190,27 @@ public class NetworkManager : MonoBehaviour
 
     void ProcessMessage(byte[] data, IPEndPoint sender)
     {
-        MessageType_B type = (MessageType_B)NetworkProtocolBinary.PeekHeader(data);
+        MessageType type = (MessageType)NetworkProtocolBinary.PeekHeader(data);
 
         switch (type)
         {
-            case MessageType_B.Join:
+            case MessageType.Join:
                 if (isHost) HandleClientJoin(sender, data);
                 break;
-            case MessageType_B.GameState:
+            case MessageType.GameState:
                 if (!isHost) HandleGameState(data);
                 break;
-            case MessageType_B.PlayerInput:
-                if (isHost) HandlePlayerInput(data, sender);
+            case MessageType.PlayerTransform:
+                if (isHost) 
+                    HandlePlayerTransformFromClient(data, sender);
+                else 
+                    HandlePlayerTransformUpdate(data);
+                break;
+            case MessageType.AssignPlayerId:
+                if (!isHost) HandleAssignPlayerId(data);
+                break;
+            case MessageType.SyncExistingPlayers:
+                if (!isHost) HandleSyncExistingPlayers(data);
                 break;
         }
     }
@@ -200,27 +218,26 @@ public class NetworkManager : MonoBehaviour
     void HandleClientJoin(IPEndPoint client, byte[] data)
     {
         string clientId = client.ToString();
-        
+
         if (!connectedClients.ContainsKey(clientId))
         {
             connectedClients[clientId] = client;
-            
-            string receivedCode = NetworkProtocolBinary.DeserializeString(data);
-            string clientIP = client.Address.ToString();
-            
-            if (!string.IsNullOrEmpty(receivedCode) && receivedCode != "JOIN")
+            clientIdToEndpoint[clientId] = client;
+
+            UnityMainThread.ExecuteInUpdate(() =>
             {
-                codeToIPMap[receivedCode] = clientIP;
-            }
-            
-            Debug.Log("Cliente conectado: " + clientId);
+                if (PlayerManager.Instance != null)
+                {
+                    PlayerManager.Instance.HandleClientJoined(clientId);
+                }
+            });
         }
     }
 
     void HandleGameState(byte[] data)
     {
-        GameStateData_B state = NetworkProtocolBinary.DeserializeGameState(data);
-        
+        GameStateData state = NetworkProtocolBinary.DeserializeGameState(data);
+
         UnityMainThread.ExecuteInUpdate(() =>
         {
             if (NetworkObjectManager.Instance != null)
@@ -230,9 +247,85 @@ public class NetworkManager : MonoBehaviour
         });
     }
 
-    void HandlePlayerInput(byte[] data, IPEndPoint sender)
+    void HandlePlayerTransformFromClient(byte[] data, IPEndPoint sender)
     {
-        PlayerInputData_B input = NetworkProtocolBinary.DeserializeInput(data);
+        PlayerTransformData transform = NetworkProtocolBinary.DeserializePlayerTransform(data);
+
+        UnityMainThread.ExecuteInUpdate(() =>
+        {
+            if (NetworkObjectManager.Instance != null)
+            {
+                NetworkObject netObj = NetworkObjectManager.Instance.GetNetworkObject(transform.playerId);
+                if (netObj != null)
+                {
+                    netObj.UpdateState(transform.position, transform.rotation);
+                }
+            }
+        });
+
+        SendToAllClientsExcept(data, sender);
+    }
+
+    void HandlePlayerTransformUpdate(byte[] data)
+    {
+        PlayerTransformData transform = NetworkProtocolBinary.DeserializePlayerTransform(data);
+
+        UnityMainThread.ExecuteInUpdate(() =>
+        {
+            if (NetworkObjectManager.Instance != null)
+            {
+                NetworkObject netObj = NetworkObjectManager.Instance.GetNetworkObject(transform.playerId);
+                if (netObj != null)
+                {
+                    netObj.UpdateState(transform.position, transform.rotation);
+                }
+            }
+        });
+    }
+
+    void HandleAssignPlayerId(byte[] data)
+    {
+        string playerId = NetworkProtocolBinary.DeserializeString(data);
+
+        UnityMainThread.ExecuteInUpdate(() =>
+        {
+            if (PlayerManager.Instance != null)
+            {
+                PlayerManager.Instance.ReceiveMyPlayerId(playerId);
+            }
+        });
+    }
+
+    void HandleSyncExistingPlayers(byte[] data)
+    {
+        ExistingPlayersData playersData = NetworkProtocolBinary.DeserializeExistingPlayers(data);
+
+        UnityMainThread.ExecuteInUpdate(() =>
+        {
+            if (PlayerManager.Instance != null)
+            {
+                PlayerManager.Instance.SpawnExistingPlayers(playersData);
+            }
+        });
+    }
+
+    public void SendPlayerIdToClient(string clientId, string playerId)
+    {
+        if (clientIdToEndpoint.ContainsKey(clientId))
+        {
+            byte[] data = NetworkProtocolBinary.SerializePlayerId(playerId);
+            udpClient.Send(data, data.Length, clientIdToEndpoint[clientId]);
+        }
+    }
+
+    public void SendExistingPlayersToClient(string clientId, ExistingPlayersData playersData)
+    {
+        if (clientIdToEndpoint.ContainsKey(clientId))
+        {
+            byte[] data = NetworkProtocolBinary.SerializeExistingPlayers(playersData);
+            udpClient.Send(data, data.Length, clientIdToEndpoint[clientId]);
+            Debug.Log($"Sent {playersData.players.Count} existing players to {clientId}");
+        }
     }
 
     #endregion
@@ -251,7 +344,7 @@ public class NetworkManager : MonoBehaviour
             }
         }
         catch { }
-        
+
         return "127.0.0.1";
     }
 
@@ -259,16 +352,16 @@ public class NetworkManager : MonoBehaviour
     {
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         System.Random random = new System.Random();
-        
+
         string prefix = "";
         for (int i = 0; i < 2; i++)
         {
             prefix += chars[random.Next(chars.Length)];
         }
-        
+
         string ip = GetLocalIP();
         string ipEncoded = EncodeIPCompact(ip);
-        
+
         return prefix + ipEncoded;
     }
 
@@ -276,38 +369,38 @@ public class NetworkManager : MonoBehaviour
     {
         string[] octets = ip.Split('.');
         string code = "";
-        
+
         for (int i = 0; i < octets.Length; i++)
         {
             int octet = int.Parse(octets[i]);
             string encoded = ToBase36(octet);
-            
+
             if (encoded.Length == 1)
                 encoded = "0" + encoded;
-            
+
             code += encoded;
         }
-        
+
         return code;
     }
 
     string DecodeIPFromCode(string code)
     {
         string ipPart = code.Substring(2);
-        
+
         string ip = "";
         for (int i = 0; i < ipPart.Length; i += 2)
         {
             if (i + 2 > ipPart.Length) break;
-            
+
             string encoded = ipPart.Substring(i, 2);
             int octet = FromBase36(encoded);
             ip += octet.ToString();
-            
+
             if (i + 2 < ipPart.Length)
                 ip += ".";
         }
-        
+
         return ip;
     }
 
@@ -315,13 +408,13 @@ public class NetworkManager : MonoBehaviour
     {
         const string chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         string result = "";
-        
+
         do
         {
             result = chars[value % 36] + result;
             value /= 36;
         } while (value > 0);
-        
+
         return result;
     }
 
@@ -329,30 +422,28 @@ public class NetworkManager : MonoBehaviour
     {
         const string chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         int result = 0;
-        
+
         for (int i = 0; i < value.Length; i++)
         {
             result = result * 36 + chars.IndexOf(char.ToUpper(value[i]));
         }
-        
+
         return result;
     }
 
     public void Disconnect()
     {
         running = false;
-        
+
         if (receiveThread != null && receiveThread.IsAlive)
             receiveThread.Join(1000);
-        
+
         if (udpClient != null)
             udpClient.Close();
 
         connectedClients.Clear();
         isConnected = false;
         isHost = false;
-        
-        Debug.Log("Desconectado");
     }
 
     void OnApplicationQuit()
@@ -364,24 +455,39 @@ public class NetworkManager : MonoBehaviour
 
     #region Public API
 
-    public void SendInput(float horizontal, float vertical)
+    public void SendPlayerTransform(string playerId, Vector3 position, Quaternion rotation)
     {
-        if (!isHost && isConnected)
-        {
-            PlayerInputData_B input = new PlayerInputData_B
-            {
-                horizontal = horizontal,
-                vertical = vertical
-            };
+        if (!isConnected) return;
 
-            byte[] data = NetworkProtocolBinary.SerializeInput(input);
+        PlayerTransformData transform = new PlayerTransformData
+        {
+            playerId = playerId,
+            position = position,
+            rotation = rotation
+        };
+
+        byte[] data = NetworkProtocolBinary.SerializePlayerTransform(transform);
+        
+        if (isHost)
+        {
+            SendToAllClients(data);
+        }
+        else
+        {
             SendToHost(data);
         }
     }
 
     public int GetPlayerCount()
     {
-        return connectedClients.Count + (isHost ? 1 : 0);
+        if (isHost)
+        {
+            return connectedClients.Count + 1;
+        }
+        else
+        {
+            return isConnected ? 2 : 0;
+        }
     }
 
     #endregion
