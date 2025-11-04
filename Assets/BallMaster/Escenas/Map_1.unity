@@ -765,6 +765,7 @@ GameObject:
   - component: {fileID: 202740056}
   - component: {fileID: 202740055}
   - component: {fileID: 202740058}
+  - component: {fileID: 202740059}
   m_Layer: 0
   m_Name: Cube (5)
   m_TagString: Untagged
@@ -879,8 +880,22 @@ MonoBehaviour:
   tiempoEspera: 30
   distanciaBajada: 4
   duracionBajada: 2
-  tiempoEsperaSubida: 60
+  tiempoEsperaSubida: 12
   duracionSubida: 2
+--- !u!114 &202740059
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 202740053}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d90d50a9e87c8d4da484e39738e5cfb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkObject
+  objectId: MovingWall_02
+  interpolationSpeed: 15
 --- !u!1001 &356114497
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1802,6 +1817,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NetworkObject
   objectId: 1
+  interpolationSpeed: 15
 --- !u!65 &625871941
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -4809,6 +4825,7 @@ GameObject:
   - component: {fileID: 1733548185}
   - component: {fileID: 1733548184}
   - component: {fileID: 1733548187}
+  - component: {fileID: 1733548188}
   m_Layer: 0
   m_Name: Cube (1)
   m_TagString: Untagged
@@ -4921,10 +4938,24 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MovingWall
   tiempoEspera: 30
-  distanciaBajada: 2
+  distanciaBajada: 4
   duracionBajada: 2
-  tiempoEsperaSubida: 60
+  tiempoEsperaSubida: 12
   duracionSubida: 2
+--- !u!114 &1733548188
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1733548182}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d90d50a9e87c8d4da484e39738e5cfb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkObject
+  objectId: MovingWall_01
+  interpolationSpeed: 15
 --- !u!1001 &1777840334
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -5015,6 +5046,7 @@ GameObject:
   - component: {fileID: 1884478924}
   - component: {fileID: 1884478923}
   - component: {fileID: 1884478926}
+  - component: {fileID: 1884478927}
   m_Layer: 0
   m_Name: Cube (4)
   m_TagString: Untagged
@@ -5127,10 +5159,24 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MovingWall
   tiempoEspera: 30
-  distanciaBajada: 2
+  distanciaBajada: 4
   duracionBajada: 2
-  tiempoEsperaSubida: 60
+  tiempoEsperaSubida: 12
   duracionSubida: 2
+--- !u!114 &1884478927
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1884478921}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d90d50a9e87c8d4da484e39738e5cfb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkObject
+  objectId: MovingWall_03
+  interpolationSpeed: 15
 --- !u!1 &1891544623
 GameObject:
   m_ObjectHideFlags: 0
