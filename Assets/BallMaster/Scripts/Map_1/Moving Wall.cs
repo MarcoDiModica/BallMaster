@@ -16,6 +16,7 @@ public class MovingWall : MonoBehaviour
     void Start()
     {
         posicionInicial = transform.position;
+        networkObject = GetComponent<NetworkObject>();
         StartCoroutine(BajarDespuesDeTiempoCoroutine());
 
         if (NetworkManager.Instance != null && NetworkManager.Instance.isHost)
@@ -25,7 +26,6 @@ public class MovingWall : MonoBehaviour
                 networkObject.objectId = "MovingWall_" + GetInstanceID();
                 Debug.LogWarning($"Asignado objectId temporal a MovingWall: {networkObject.objectId}. Es mejor asignarlo en el Inspector.");
             }
-
             StartCoroutine(BajarDespuesDeTiempoCoroutine());
         }
         else
@@ -41,7 +41,6 @@ public class MovingWall : MonoBehaviour
             yield return new WaitForSeconds(tiempoEspera);
 
             Vector3 posicionFinal = posicionInicial + Vector3.down * distanciaBajada;
-            Vector3 v3 = new Vector3(0, -4, 0);
             float tiempoTranscurrido = 0f;
 
             while (tiempoTranscurrido < duracionBajada)
@@ -51,7 +50,7 @@ public class MovingWall : MonoBehaviour
                 yield return null;
             }
 
-            transform.position = posicionFinal - v3;
+            transform.position = posicionFinal;
 
             Debug.Log($"{gameObject.name} ha bajado {distanciaBajada} unidades después de {tiempoEspera} segundos.");
 
