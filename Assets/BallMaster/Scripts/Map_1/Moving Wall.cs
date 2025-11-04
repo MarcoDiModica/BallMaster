@@ -6,9 +6,9 @@ public class MovingWall : MonoBehaviour
 {
     public float tiempoEspera = 30f; // tiempo en segundos antes de bajar
     public float distanciaBajada = 2f; // unidades que baja en Y
-    public float duracionBajada = 2f; // duración del movimiento descendente en segundos
+    public float duracionBajada = 2f; // duraciï¿½n del movimiento descendente en segundos
     public float tiempoEsperaSubida = 60f; // tiempo en segundos antes de volver a subir
-    public float duracionSubida = 2f; // duración del movimiento ascendente en segundos
+    public float duracionSubida = 2f; // duraciï¿½n del movimiento ascendente en segundos
 
     private Vector3 posicionInicial;
     private NetworkObject networkObject;
@@ -17,14 +17,13 @@ public class MovingWall : MonoBehaviour
     {
         posicionInicial = transform.position;
         networkObject = GetComponent<NetworkObject>();
-        StartCoroutine(BajarDespuesDeTiempoCoroutine());
 
         if (NetworkManager.Instance != null && NetworkManager.Instance.isHost)
         {
             if (string.IsNullOrEmpty(networkObject.objectId))
             {
                 networkObject.objectId = "MovingWall_" + GetInstanceID();
-                Debug.LogWarning($"Asignado objectId temporal a MovingWall: {networkObject.objectId}. Es mejor asignarlo en el Inspector.");
+                Debug.LogWarning($"Asignado objectId temporal a MovingWall: {networkObject.objectId}");
             }
             StartCoroutine(BajarDespuesDeTiempoCoroutine());
         }
@@ -36,7 +35,7 @@ public class MovingWall : MonoBehaviour
 
     System.Collections.IEnumerator BajarDespuesDeTiempoCoroutine()
     {
-        while(true)
+        while (true)
         {
             yield return new WaitForSeconds(tiempoEspera);
 
@@ -52,9 +51,9 @@ public class MovingWall : MonoBehaviour
 
             transform.position = posicionFinal;
 
-            Debug.Log($"{gameObject.name} ha bajado {distanciaBajada} unidades después de {tiempoEspera} segundos.");
+            Debug.Log($"{gameObject.name} ha bajado {distanciaBajada} unidades despuï¿½s de {tiempoEspera} segundos.");
 
-            // Espera antes de volver a la posición inicial
+            // Espera antes de volver a la posiciï¿½n inicial
             yield return new WaitForSeconds(tiempoEsperaSubida);
 
             // Inicia la subida progresiva
@@ -68,7 +67,7 @@ public class MovingWall : MonoBehaviour
 
             transform.position = posicionInicial;
 
-            Debug.Log($"{gameObject.name} ha vuelto a la posición inicial después de {tiempoEsperaSubida} segundos.");
+            Debug.Log($"{gameObject.name} ha vuelto a la posiciï¿½n inicial despuï¿½s de {tiempoEsperaSubida} segundos.");
         }
     }
 }

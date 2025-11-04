@@ -15,8 +15,8 @@ public class NetworkObject : MonoBehaviour
 
     public void UpdateState(Vector3 pos, Quaternion rot)
     {
-        transform.position = pos;
-        transform.rotation = rot;
+        targetPosition = pos;
+        targetRotation = rot;
     }
 
     void Update()
