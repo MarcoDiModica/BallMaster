@@ -6,6 +6,6 @@
 
 ## How to play BallMaster:
 
-- WASD to shoot
+- WASD to move
 - SPACE to jump
 - Left Click to shoot
