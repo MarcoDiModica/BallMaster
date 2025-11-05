@@ -34,7 +34,7 @@ public class Ball : MonoBehaviour
         rb.interpolation = RigidbodyInterpolation.Interpolate;
     }
 
-    public void Launch(Vector3 direction, string launcherId)
+    public void Launch(Vector3 direction, string launcherId, Vector3? launchPosition = null)
     {
         currentState = BallState.Hot;
         ownerPlayerId = launcherId;
@@ -44,6 +44,11 @@ public class Ball : MonoBehaviour
         
         isEquipped = false;
         equipTransform = null;
+        
+        if (launchPosition.HasValue)
+        {
+            transform.position = launchPosition.Value;
+        }
         
         rb.interpolation = RigidbodyInterpolation.Interpolate;
         rb.useGravity = false;
@@ -100,7 +105,7 @@ public class Ball : MonoBehaviour
         
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
-        
+
         rb.interpolation = RigidbodyInterpolation.None;
         rb.isKinematic = true;
         rb.useGravity = false;

@@ -13,7 +13,9 @@ public enum MessageType : byte
     StartGame,
     AssignPlayerId,
     SyncExistingPlayers,
-    BallState
+    BallState,
+    SyncExistingBalls,
+    BallLaunched
 }
 
 public class PlayerTransformData
@@ -33,6 +35,30 @@ public class ExistingPlayerData
 public class ExistingPlayersData
 {
     public List<ExistingPlayerData> players = new List<ExistingPlayerData>();
+}
+
+public class ExistingBallData
+{
+    public string ballId;
+    public Vector3 position;
+    public Quaternion rotation;
+    public Vector3 velocity;
+    public byte state;
+    public string ownerPlayerId;
+    public int bounceCount;
+}
+
+public class ExistingBallsData
+{
+    public List<ExistingBallData> balls = new List<ExistingBallData>();
+}
+
+public class BallLaunchData
+{
+    public string ballId;
+    public Vector3 direction;
+    public string launcherId;
+    public Vector3 launchPosition;
 }
 
 public class ObjectState
@@ -112,6 +138,36 @@ public static class NetworkProtocolBinary
         });
     }
 
+    public static byte[] SerializeExistingBalls(ExistingBallsData ballsData)
+    {
+        return Serialize(MessageType.SyncExistingBalls, (writer) =>
+        {
+            writer.Write(ballsData.balls.Count);
+
+            foreach (var ball in ballsData.balls)
+            {
+                writer.Write(ball.ballId);
+                WriteVector3(writer, ball.position);
+                WriteQuaternion(writer, ball.rotation);
+                WriteVector3(writer, ball.velocity);
+                writer.Write(ball.state);
+                writer.Write(ball.ownerPlayerId ?? "");
+                writer.Write(ball.bounceCount);
+            }
+        });
+    }
+
+    public static byte[] SerializeBallLaunch(BallLaunchData launchData)
+    {
+        return Serialize(MessageType.BallLaunched, (writer) =>
+        {
+            writer.Write(launchData.ballId);
+            WriteVector3(writer, launchData.direction);
+            writer.Write(launchData.launcherId);
+            WriteVector3(writer, launchData.launchPosition);
+        });
+    }
+
     public static byte[] SerializeGameState(GameStateData gameState)
     {
         return Serialize(MessageType.GameState, (writer) =>
@@ -181,6 +237,48 @@ public static class NetworkProtocolBinary
             }
         }
         return playersData;
+    }
+
+    public static ExistingBallsData DeserializeExistingBalls(byte[] data)
+    {
+        ExistingBallsData ballsData = new ExistingBallsData();
+        using (MemoryStream stream = new MemoryStream(data))
+        using (BinaryReader reader = new BinaryReader(stream))
+        {
+            reader.ReadByte();
+            int ballCount = reader.ReadInt32();
+
+            for (int i = 0; i < ballCount; i++)
+            {
+                ballsData.balls.Add(new ExistingBallData
+                {
+                    ballId = reader.ReadString(),
+                    position = ReadVector3(reader),
+                    rotation = ReadQuaternion(reader),
+                    velocity = ReadVector3(reader),
+                    state = reader.ReadByte(),
+                    ownerPlayerId = reader.ReadString(),
+                    bounceCount = reader.ReadInt32()
+                });
+            }
+        }
+        return ballsData;
+    }
+
+    public static BallLaunchData DeserializeBallLaunch(byte[] data)
+    {
+        using (MemoryStream stream = new MemoryStream(data))
+        using (BinaryReader reader = new BinaryReader(stream))
+        {
+            reader.ReadByte();
+            return new BallLaunchData
+            {
+                ballId = reader.ReadString(),
+                direction = ReadVector3(reader),
+                launcherId = reader.ReadString(),
+                launchPosition = ReadVector3(reader)
+            };
+        }
     }
 
     public static GameStateData DeserializeGameState(byte[] data)

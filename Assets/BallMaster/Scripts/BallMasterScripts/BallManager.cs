@@ -141,6 +141,62 @@ public class BallManager : MonoBehaviour
         }
     }
 
+    public ExistingBallsData GetExistingBallsData()
+    {
+        ExistingBallsData ballsData = new ExistingBallsData();
+
+        foreach (var kvp in balls)
+        {
+            Ball ball = kvp.Value;
+            Rigidbody rb = ball.GetComponent<Rigidbody>();
+
+            ballsData.balls.Add(new ExistingBallData
+            {
+                ballId = kvp.Key,
+                position = ball.transform.position,
+                rotation = ball.transform.rotation,
+                velocity = rb.linearVelocity,
+                state = (byte)ball.currentState,
+                ownerPlayerId = ball.ownerPlayerId,
+                bounceCount = ball.maxBouncesWithoutGravity
+            });
+        }
+
+        return ballsData;
+    }
+
+    public void SpawnExistingBalls(ExistingBallsData ballsData)
+    {
+        foreach (var ballData in ballsData.balls)
+        {
+            if (!balls.ContainsKey(ballData.ballId))
+            {
+                GameObject ballObj = Instantiate(ballPrefab, ballData.position, ballData.rotation);
+                NetworkObject netObj = ballObj.GetComponent<NetworkObject>();
+                netObj.objectId = ballData.ballId;
+
+                Ball ball = ballObj.GetComponent<Ball>();
+                ball.currentState = (Ball.BallState)ballData.state;
+                ball.ownerPlayerId = ballData.ownerPlayerId;
+
+                Rigidbody rb = ball.GetComponent<Rigidbody>();
+                rb.linearVelocity = ballData.velocity;
+
+                if (ball.currentState == Ball.BallState.Hot)
+                {
+                    rb.useGravity = false;
+                }
+
+                balls[ballData.ballId] = ball;
+
+                if (NetworkObjectManager.Instance != null)
+                {
+                    NetworkObjectManager.Instance.RegisterNetworkObject(netObj);
+                }
+            }
+        }
+    }
+
     public Ball GetBall(string ballId)
     {
         return balls.ContainsKey(ballId) ? balls[ballId] : null;

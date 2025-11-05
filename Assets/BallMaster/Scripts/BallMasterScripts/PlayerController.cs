@@ -82,7 +82,6 @@ public class PlayerController : MonoBehaviour
     {
         if (!isLocalPlayer) return;
 
-        // Si está pausado, no procesar input del jugador
         if (isPaused) return;
 
         if (Cursor.lockState != CursorLockMode.Locked)
@@ -163,7 +162,6 @@ public class PlayerController : MonoBehaviour
         Ball ball = other.GetComponent<Ball>();
         if (ball != null && ball.CanBePickedUp(networkObject.objectId))
         {
-            Debug.Log($"Player {networkObject.objectId} picked up ball {ball.GetComponent<NetworkObject>().objectId}");
             EquipBall(ball);
         }
     }
@@ -187,9 +185,17 @@ public class PlayerController : MonoBehaviour
         if (equippedBall == null) return;
 
         Vector3 shootDirection = cameraTransform.forward;
+        NetworkObject ballNetObj = equippedBall.GetComponent<NetworkObject>();
+        
+        Vector3 ballPosition = equippedBall.transform.position;
         
         equippedBall.Unequip();
         equippedBall.Launch(shootDirection, networkObject.objectId);
+        
+        if (NetworkManager.Instance != null && ballNetObj != null)
+        {
+            NetworkManager.Instance.SendBallLaunch(ballNetObj.objectId, shootDirection, networkObject.objectId, ballPosition);
+        }
         
         equippedBall = null;
     }
