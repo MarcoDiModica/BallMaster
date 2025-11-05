@@ -37,7 +37,7 @@ public class PlayerManager : MonoBehaviour
     {
         if (players.ContainsKey(playerId))
         {
-            Debug.LogWarning($"{playerId} ya existe, hay un doppleganger!");
+            Debug.LogWarning($"{playerId} ya existe, hay un dopplerganger!");
             return;
         }
 

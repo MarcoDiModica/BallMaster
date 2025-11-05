@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using TMPro;
+using UnityEngine.InputSystem;
 
 public class GameUI : MonoBehaviour
 {
@@ -13,12 +14,22 @@ public class GameUI : MonoBehaviour
     public Button copyCodeButton;
     public Button backButton;
 
+    [Header("Paneles")]
+    public GameObject pauseMenuPanel;
+
+    private PlayerController localPlayer;
+
     void Start()
     {
         backButton.onClick.AddListener(OnBackClicked);
-        
+
         if (copyCodeButton != null)
             copyCodeButton.onClick.AddListener(OnCopyCodeClicked);
+
+        pauseMenuPanel.SetActive(false);
+
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 
     void Update()
@@ -44,10 +55,51 @@ public class GameUI : MonoBehaviour
                 codeText.text = "";
             }
         }
-        
+
         if (copyCodeButton != null)
         {
             copyCodeButton.gameObject.SetActive(NetworkManager.Instance.isHost);
+        }
+        
+        if (Keyboard.current.escapeKey.wasPressedThisFrame)
+        {
+            TogglePause();
+        }
+    }
+
+    void TogglePause()
+    {
+        bool isPaused = !pauseMenuPanel.activeSelf;
+        pauseMenuPanel.SetActive(isPaused);
+        
+        if (isPaused)
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
+        else
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
+        
+        // Buscar el jugador local y pausar sus controles
+        if (localPlayer == null)
+        {
+            PlayerController[] players = FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
+            foreach (var player in players)
+            {
+                if (player.IsLocalPlayer())
+                {
+                    localPlayer = player;
+                    break;
+                }
+            }
+        }
+        
+        if (localPlayer != null)
+        {
+            localPlayer.SetPaused(isPaused);
         }
     }
 

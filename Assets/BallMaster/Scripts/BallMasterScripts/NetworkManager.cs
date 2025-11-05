@@ -212,6 +212,9 @@ public class NetworkManager : MonoBehaviour
             case MessageType.SyncExistingPlayers:
                 if (!isHost) HandleSyncExistingPlayers(data);
                 break;
+            case MessageType.BallState:
+                if (!isHost) HandleBallStates(data);
+                break;
         }
     }
 
@@ -305,6 +308,19 @@ public class NetworkManager : MonoBehaviour
             if (PlayerManager.Instance != null)
             {
                 PlayerManager.Instance.SpawnExistingPlayers(playersData);
+            }
+        });
+    }
+
+    void HandleBallStates(byte[] data)
+    {
+        List<BallStateData> ballStates = NetworkProtocolBinary.DeserializeBallStates(data);
+
+        UnityMainThread.ExecuteInUpdate(() =>
+        {
+            if (BallManager.Instance != null)
+            {
+                BallManager.Instance.ApplyBallStates(ballStates);
             }
         });
     }
@@ -488,6 +504,14 @@ public class NetworkManager : MonoBehaviour
         {
             return isConnected ? 2 : 0;
         }
+    }
+
+    public void SendBallStates(List<BallStateData> ballStates)
+    {
+        if (!isConnected || !isHost) return;
+
+        byte[] data = NetworkProtocolBinary.SerializeBallStates(ballStates);
+        SendToAllClients(data);
     }
 
     #endregion

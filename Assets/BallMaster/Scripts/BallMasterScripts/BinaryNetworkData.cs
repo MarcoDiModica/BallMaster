@@ -12,7 +12,8 @@ public enum MessageType : byte
     GameState,
     StartGame,
     AssignPlayerId,
-    SyncExistingPlayers
+    SyncExistingPlayers,
+    BallState
 }
 
 public class PlayerTransformData
@@ -44,6 +45,17 @@ public class ObjectState
 public class GameStateData
 {
     public List<ObjectState> objects = new List<ObjectState>();
+}
+
+public class BallStateData
+{
+    public string ballId;
+    public Vector3 position;
+    public Quaternion rotation;
+    public Vector3 velocity;
+    public byte state;
+    public string ownerPlayerId;
+    public int bounceCount;
 }
 
 public static class NetworkProtocolBinary
@@ -216,5 +228,50 @@ public static class NetworkProtocolBinary
     private static Quaternion ReadQuaternion(BinaryReader reader)
     {
         return new Quaternion(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
+    }
+
+    public static byte[] SerializeBallStates(List<BallStateData> ballStates)
+    {
+        return Serialize(MessageType.BallState, (writer) =>
+        {
+            writer.Write(ballStates.Count);
+
+            foreach (var ball in ballStates)
+            {
+                writer.Write(ball.ballId);
+                WriteVector3(writer, ball.position);
+                WriteQuaternion(writer, ball.rotation);
+                WriteVector3(writer, ball.velocity);
+                writer.Write(ball.state);
+                writer.Write(ball.ownerPlayerId ?? "");
+                writer.Write(ball.bounceCount);
+            }
+        });
+    }
+
+    public static List<BallStateData> DeserializeBallStates(byte[] data)
+    {
+        List<BallStateData> ballStates = new List<BallStateData>();
+        using (MemoryStream stream = new MemoryStream(data))
+        using (BinaryReader reader = new BinaryReader(stream))
+        {
+            reader.ReadByte();
+            int ballCount = reader.ReadInt32();
+
+            for (int i = 0; i < ballCount; i++)
+            {
+                ballStates.Add(new BallStateData
+                {
+                    ballId = reader.ReadString(),
+                    position = ReadVector3(reader),
+                    rotation = ReadQuaternion(reader),
+                    velocity = ReadVector3(reader),
+                    state = reader.ReadByte(),
+                    ownerPlayerId = reader.ReadString(),
+                    bounceCount = reader.ReadInt32()
+                });
+            }
+        }
+        return ballStates;
     }
 }

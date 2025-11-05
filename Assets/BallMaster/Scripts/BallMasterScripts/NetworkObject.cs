@@ -3,11 +3,13 @@ using UnityEngine;
 public class NetworkObject : MonoBehaviour
 {
     public string objectId;
+    public bool useInterpolation = true;
     private Vector3 targetPosition;
     private Quaternion targetRotation;
     public float interpolationSpeed = 15f;
     private PlayerController playerController;
     private bool checkedForPlayer = false;
+    private Ball ball;
 
     void Awake()
     {
@@ -26,8 +28,16 @@ public class NetworkObject : MonoBehaviour
         if (!checkedForPlayer)
         {
             playerController = GetComponent<PlayerController>();
+            ball = GetComponent<Ball>();
+            
+            if (ball != null)
+                useInterpolation = false;
+            
             checkedForPlayer = true;
         }
+
+        if (!useInterpolation)
+            return;
 
         if (playerController != null && playerController.IsLocalPlayer())
         {
