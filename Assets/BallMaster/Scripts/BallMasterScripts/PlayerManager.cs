@@ -130,4 +130,6 @@ public class PlayerManager : MonoBehaviour
     {
         return players;
     }
+
+    // En cada player debería haber un Replicador
 }
