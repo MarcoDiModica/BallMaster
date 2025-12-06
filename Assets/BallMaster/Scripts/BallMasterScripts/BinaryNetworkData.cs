@@ -15,7 +15,8 @@ public enum MessageType : byte
     SyncExistingPlayers,
     BallState,
     SyncExistingBalls,
-    BallLaunched
+    BallLaunched,
+    BallEquip
 }
 
 public class PlayerTransformData
@@ -46,6 +47,7 @@ public class ExistingBallData
     public byte state;
     public string ownerPlayerId;
     public int bounceCount;
+    public string equippedPlayerId;
 }
 
 public class ExistingBallsData
@@ -59,6 +61,12 @@ public class BallLaunchData
     public Vector3 direction;
     public string launcherId;
     public Vector3 launchPosition;
+}
+
+public class BallEquipData
+{
+    public string ballId;
+    public string playerId;
 }
 
 public class ObjectState
@@ -82,6 +90,7 @@ public class BallStateData
     public byte state;
     public string ownerPlayerId;
     public int bounceCount;
+    public string equippedPlayerId;
 }
 
 public static class NetworkProtocolBinary
@@ -153,6 +162,7 @@ public static class NetworkProtocolBinary
                 writer.Write(ball.state);
                 writer.Write(ball.ownerPlayerId ?? "");
                 writer.Write(ball.bounceCount);
+                writer.Write(ball.equippedPlayerId ?? "");
             }
         });
     }
@@ -165,6 +175,15 @@ public static class NetworkProtocolBinary
             WriteVector3(writer, launchData.direction);
             writer.Write(launchData.launcherId);
             WriteVector3(writer, launchData.launchPosition);
+        });
+    }
+    
+    public static byte[] SerializeBallEquip(BallEquipData equipData)
+    {
+        return Serialize(MessageType.BallEquip, (writer) =>
+        {
+            writer.Write(equipData.ballId);
+            writer.Write(equipData.playerId);
         });
     }
 
@@ -258,7 +277,8 @@ public static class NetworkProtocolBinary
                     velocity = ReadVector3(reader),
                     state = reader.ReadByte(),
                     ownerPlayerId = reader.ReadString(),
-                    bounceCount = reader.ReadInt32()
+                    bounceCount = reader.ReadInt32(),
+                    equippedPlayerId = reader.ReadString()
                 });
             }
         }
@@ -277,6 +297,20 @@ public static class NetworkProtocolBinary
                 direction = ReadVector3(reader),
                 launcherId = reader.ReadString(),
                 launchPosition = ReadVector3(reader)
+            };
+        }
+    }
+    
+    public static BallEquipData DeserializeBallEquip(byte[] data)
+    {
+        using (MemoryStream stream = new MemoryStream(data))
+        using (BinaryReader reader = new BinaryReader(stream))
+        {
+            reader.ReadByte();
+            return new BallEquipData
+            {
+                ballId = reader.ReadString(),
+                playerId = reader.ReadString()
             };
         }
     }
@@ -343,6 +377,7 @@ public static class NetworkProtocolBinary
                 writer.Write(ball.state);
                 writer.Write(ball.ownerPlayerId ?? "");
                 writer.Write(ball.bounceCount);
+                writer.Write(ball.equippedPlayerId ?? "");
             }
         });
     }
@@ -366,7 +401,8 @@ public static class NetworkProtocolBinary
                     velocity = ReadVector3(reader),
                     state = reader.ReadByte(),
                     ownerPlayerId = reader.ReadString(),
-                    bounceCount = reader.ReadInt32()
+                    bounceCount = reader.ReadInt32(),
+                    equippedPlayerId = reader.ReadString()
                 });
             }
         }

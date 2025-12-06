@@ -9,7 +9,6 @@ public class NetworkObjectManager : MonoBehaviour
     void Awake()
     {
         RefreshNetworkObjects();
-        Debug.Log($"NetworkObjectManager initialized with {networkObjects.Count} objects.");
     }
 
     public void RefreshNetworkObjects()

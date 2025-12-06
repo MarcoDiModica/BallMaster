@@ -5,6 +5,7 @@ public class PlayerManager : MonoBehaviour
 {
     [Header("Dependencies")]
     [SerializeField] private NetworkManager networkManager;
+    public NetworkManager NetworkManager => networkManager;
     [SerializeField] private NetworkObjectManager networkObjectManager;
 
     public GameObject playerPrefab;
@@ -32,7 +33,6 @@ public class PlayerManager : MonoBehaviour
                 }
                 else if (networkManager.isConnected)
                 {
-                     // Determine if we need to send the join request now that the scene is loaded
                      networkManager.SendPendingJoinRequest();
                      
                      string pendingId = networkManager.GetPendingPlayerId();

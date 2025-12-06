@@ -329,7 +329,7 @@ public class PlayerController : MonoBehaviour
             string myId = GetComponent<NetworkObject>()?.objectId ?? "local";
             if (ball.CanBePickedUp(myId))
             {
-                EquipBall(ball);
+                EquipBallWithSync(ball);
             }
         }
     }
@@ -337,14 +337,28 @@ public class PlayerController : MonoBehaviour
     public void EquipBall(Ball ball)
     {
         equippedBall = ball;
+        string myId = GetComponent<NetworkObject>()?.objectId ?? "local";
         
         if (ballEquipTransform != null)
         {
-            ball.Equip(ballEquipTransform);
+            ball.Equip(ballEquipTransform, myId);
         }
         else if (cameraTransform != null)
         {
-            ball.Equip(cameraTransform);
+            ball.Equip(cameraTransform, myId);
+        }
+    }
+    
+    public void EquipBallWithSync(Ball ball)
+    {
+        EquipBall(ball);
+        
+        string myId = GetComponent<NetworkObject>()?.objectId;
+        string ballId = ball.GetComponent<NetworkObject>()?.objectId;
+        
+        if (playerManager != null && playerManager.NetworkManager != null && !string.IsNullOrEmpty(myId) && !string.IsNullOrEmpty(ballId))
+        {
+            playerManager.NetworkManager.SendBallEquip(ballId, myId);
         }
     }
 
@@ -354,9 +368,18 @@ public class PlayerController : MonoBehaviour
 
         Vector3 shootDirection = cameraTransform != null ? cameraTransform.forward : transform.forward;
         
+        string myId = GetComponent<NetworkObject>()?.objectId ?? "local";
+        string ballId = equippedBall.GetComponent<NetworkObject>()?.objectId;
+        Vector3 launchPos = equippedBall.transform.position;
+        
         equippedBall.Unequip();
         
-        equippedBall.Launch(shootDirection, GetComponent<NetworkObject>()?.objectId ?? "local"); 
+        equippedBall.Launch(shootDirection, myId); 
+        
+        if (playerManager != null && playerManager.NetworkManager != null && !string.IsNullOrEmpty(ballId))
+        {
+             playerManager.NetworkManager.SendBallLaunch(ballId, shootDirection, myId, launchPos);
+        }
         
         equippedBall = null;
     }

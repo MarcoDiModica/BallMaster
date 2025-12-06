@@ -50,10 +50,11 @@ public class PlayerNetworkComponent : MonoBehaviour
             {
                 playerController.enabled = false;
                 
-                // CRITIAL FIX: Disable the camera on remote players!
                 if (playerController.cameraTransform != null)
                 {
-                    playerController.cameraTransform.gameObject.SetActive(false);
+                    
+                    Camera cam = playerController.cameraTransform.GetComponent<Camera>();
+                    if (cam != null) cam.enabled = false;
                     
                     var listeners = playerController.cameraTransform.GetComponentsInChildren<AudioListener>();
                     foreach(var listener in listeners) listener.enabled = false;
@@ -79,17 +80,25 @@ public class PlayerNetworkComponent : MonoBehaviour
                     var listeners = playerController.cameraTransform.GetComponentsInChildren<AudioListener>();
                     foreach(var listener in listeners) listener.enabled = true;
                     
-                    // Safety: Disable ANY other camera in the scene to be sure
                     foreach (var cam in FindObjectsByType<Camera>(FindObjectsSortMode.None))
                     {
                         if (cam.transform != playerController.cameraTransform)
                         {
-                            cam.gameObject.SetActive(false);
+                            cam.enabled = false;
                             var l = cam.GetComponent<AudioListener>();
                             if (l != null) l.enabled = false;
                         }
                     }
                 }
+            }
+            
+            if (IsClientOnly())
+            {
+                 var nm = FindFirstObjectByType<NetworkManager>();
+                 if (nm != null && networkObject != null)
+                 {
+                      nm.SendMyPlayerTransform(networkObject.objectId, transform.position, transform.rotation);
+                 }
             }
         }
     }
@@ -113,6 +122,15 @@ public class PlayerNetworkComponent : MonoBehaviour
                 if (networkObject != null)
                 {
                     networkObject.MarkDirty();
+                    
+                    if (IsClientOnly())
+                    {
+                        var nm = FindFirstObjectByType<NetworkManager>();
+                        if (nm != null)
+                        {
+                            nm.SendMyPlayerTransform(networkObject.objectId, transform.position, transform.rotation);
+                        }
+                    }
                 }
                 OnTransformModified?.Invoke();
                 transform.hasChanged = false;
@@ -137,5 +155,11 @@ public class PlayerNetworkComponent : MonoBehaviour
         {
             transform.rotation = targetRotation;
         }
+    }
+
+    private bool IsClientOnly()
+    {
+        var nm = FindFirstObjectByType<NetworkManager>();
+        return nm != null && nm.isConnected && !nm.isHost;
     }
 }

@@ -52,7 +52,8 @@ public class BallManager : MonoBehaviour
                         velocity = rb.linearVelocity,
                         state = (byte)ball.currentState,
                         ownerPlayerId = ball.ownerPlayerId,
-                        bounceCount = ball.maxBouncesWithoutGravity
+                        bounceCount = ball.maxBouncesWithoutGravity,
+                        equippedPlayerId = ball.equippedPlayerId
                     });
                 }
             }
@@ -134,14 +135,25 @@ public class BallManager : MonoBehaviour
             if (balls.ContainsKey(state.ballId))
             {
                 Ball ball = balls[state.ballId];
-                ball.UpdateNetworkState(
-                    state.position,
-                    state.rotation,
-                    state.velocity,
-                    (Ball.BallState)state.state,
-                    state.ownerPlayerId,
-                    state.bounceCount
-                );
+                
+                bool shouldBeEquipped = !string.IsNullOrEmpty(state.equippedPlayerId);
+                bool currentlyEquipped = !string.IsNullOrEmpty(ball.equippedPlayerId);
+                
+                if (shouldBeEquipped && !currentlyEquipped)
+                {
+                    EquipBallNetworked(state.ballId, state.equippedPlayerId);
+                }
+                else if (!shouldBeEquipped)
+                {
+                    ball.UpdateNetworkState(
+                        state.position,
+                        state.rotation,
+                        state.velocity,
+                        (Ball.BallState)state.state,
+                        state.ownerPlayerId,
+                        state.bounceCount
+                    );
+                }
             }
         }
     }
@@ -163,7 +175,8 @@ public class BallManager : MonoBehaviour
                 velocity = rb.linearVelocity,
                 state = (byte)ball.currentState,
                 ownerPlayerId = ball.ownerPlayerId,
-                bounceCount = ball.maxBouncesWithoutGravity
+                bounceCount = ball.maxBouncesWithoutGravity,
+                equippedPlayerId = ball.equippedPlayerId
             });
         }
 
@@ -181,6 +194,7 @@ public class BallManager : MonoBehaviour
                 netObj.objectId = ballData.ballId;
 
                 Ball ball = ballObj.GetComponent<Ball>();
+                ball.Initialize(this, networkObjectManager);
                 ball.currentState = (Ball.BallState)ballData.state;
                 ball.ownerPlayerId = ballData.ownerPlayerId;
 
@@ -198,6 +212,11 @@ public class BallManager : MonoBehaviour
                 {
                     networkObjectManager.RegisterNetworkObject(netObj);
                 }
+                
+                if (!string.IsNullOrEmpty(ballData.equippedPlayerId))
+                {
+                    EquipBallNetworked(ballData.ballId, ballData.equippedPlayerId);
+                }
             }
         }
     }
@@ -210,5 +229,23 @@ public class BallManager : MonoBehaviour
     public Dictionary<string, Ball> GetAllBalls()
     {
         return balls;
+    }
+    
+    public void EquipBallNetworked(string ballId, string playerId)
+    {
+        if (balls.ContainsKey(ballId))
+        {
+            Ball ball = balls[ballId];
+            NetworkObject playerObj = networkObjectManager.GetNetworkObject(playerId);
+            
+            if (playerObj != null)
+            {
+                PlayerController pc = playerObj.GetComponent<PlayerController>();
+                if (pc != null)
+                {
+                    pc.EquipBall(ball);
+                }
+            }
+        }
     }
 }

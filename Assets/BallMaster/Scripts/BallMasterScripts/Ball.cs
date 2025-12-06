@@ -22,6 +22,8 @@ public class Ball : MonoBehaviour
     private Transform equipTransform;
     private float lastLaunchTime = -999f;
     private Collider lastLauncherCollider;
+    
+    public string equippedPlayerId { get; private set; } = "";
 
     void Awake()
     {
@@ -53,6 +55,9 @@ public class Ball : MonoBehaviour
         
         isEquipped = false;
         equipTransform = null;
+        equippedPlayerId = "";
+        
+        transform.SetParent(null);
         
         if (launchPosition.HasValue)
         {
@@ -94,8 +99,9 @@ public class Ball : MonoBehaviour
         lastLauncherCollider = null;
     }
 
-    public void Equip(Transform parent)
+    public void Equip(Transform parent, string playerId = "")
     {
+        equippedPlayerId = playerId;
         StartCoroutine(EquipCoroutine(parent));
     }
 
@@ -133,6 +139,7 @@ public class Ball : MonoBehaviour
     {
         isEquipped = false;
         equipTransform = null;
+        equippedPlayerId = "";
         
         transform.SetParent(null);
         

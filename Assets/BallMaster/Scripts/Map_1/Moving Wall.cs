@@ -12,6 +12,8 @@ public class MovingWall : MonoBehaviour
 
     private Vector3 posicionInicial;
     private NetworkObject networkObject;
+    private NetworkObjectManager networkObjectManager;
+    private bool isHost = false;
 
     [SerializeField] private NetworkManager networkManager;
 
@@ -20,18 +22,46 @@ public class MovingWall : MonoBehaviour
         posicionInicial = transform.position;
         networkObject = GetComponent<NetworkObject>();
 
-        if (networkManager != null && networkManager.isHost)
+        if (networkManager == null)
         {
-            if (string.IsNullOrEmpty(networkObject.objectId))
-            {
-                networkObject.objectId = "MovingWall_" + GetInstanceID();
-            }
+            networkManager = FindFirstObjectByType<NetworkManager>();
+        }
+
+        networkObjectManager = FindFirstObjectByType<NetworkObjectManager>();
+        isHost = networkManager != null && networkManager.isHost;
+
+        if (string.IsNullOrEmpty(networkObject.objectId))
+        {
+            networkObject.objectId = "MovingWall_" + gameObject.name;
+        }
+        
+        if (networkObjectManager != null)
+        {
+            networkObjectManager.RegisterNetworkObject(networkObject);
+        }
+
+        if (isHost)
+        {
             StartCoroutine(BajarDespuesDeTiempoCoroutine());
         }
         else
         {
-            enabled = false;
+            networkObject.OnStateUpdated += OnNetworkStateUpdated;
         }
+    }
+
+    void OnDestroy()
+    {
+        if (networkObject != null)
+        {
+            networkObject.OnStateUpdated -= OnNetworkStateUpdated;
+        }
+    }
+
+    void OnNetworkStateUpdated(Vector3 pos, Quaternion rot)
+    {
+        transform.position = pos;
+        transform.rotation = rot;
     }
 
     System.Collections.IEnumerator BajarDespuesDeTiempoCoroutine()
@@ -46,11 +76,13 @@ public class MovingWall : MonoBehaviour
             while (tiempoTranscurrido < duracionBajada)
             {
                 transform.position = Vector3.Lerp(posicionInicial, posicionFinal, tiempoTranscurrido / duracionBajada);
+                networkObject.isDirty = true;
                 tiempoTranscurrido += Time.deltaTime;
                 yield return null;
             }
 
             transform.position = posicionFinal;
+            networkObject.isDirty = true;
 
             yield return new WaitForSeconds(tiempoEsperaSubida);
 
@@ -58,11 +90,13 @@ public class MovingWall : MonoBehaviour
             while (tiempoTranscurrido < duracionSubida)
             {
                 transform.position = Vector3.Lerp(posicionFinal, posicionInicial, tiempoTranscurrido / duracionSubida);
+                networkObject.isDirty = true;
                 tiempoTranscurrido += Time.deltaTime;
                 yield return null;
             }
 
             transform.position = posicionInicial;
+            networkObject.isDirty = true;
         }
     }
 }

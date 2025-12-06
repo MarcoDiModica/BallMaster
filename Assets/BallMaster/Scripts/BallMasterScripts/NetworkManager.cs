@@ -180,9 +180,9 @@ public class NetworkManager : MonoBehaviour
             }
 
             hostEndPoint = new IPEndPoint(IPAddress.Parse(hostIP), port);
-            StartUDP(0); // Start socket but don't send Join yet
+            StartUDP(0);
             
-            currentLobbyCode = code; // Store for later
+            currentLobbyCode = code;
             isConnected = true;
         }
         catch (Exception e)
@@ -196,7 +196,6 @@ public class NetworkManager : MonoBehaviour
         if (!string.IsNullOrEmpty(currentLobbyCode))
         {
             SendJoinMessage(currentLobbyCode);
-            Debug.Log($"Sending Join Request for code: {currentLobbyCode}");
         }
     }
 
@@ -282,6 +281,12 @@ public class NetworkManager : MonoBehaviour
                     HandleBallLaunchedFromClient(data, sender);
                 else
                     HandleBallLaunchedUpdate(data);
+                break;
+            case MessageType.BallEquip:
+                if (isHost)
+                    HandleBallEquipFromClient(data, sender);
+                else
+                    HandleBallEquipUpdate(data);
                 break;
         }
     }
@@ -477,7 +482,6 @@ public class NetworkManager : MonoBehaviour
         {
             byte[] data = NetworkProtocolBinary.SerializeExistingPlayers(playersData);
             udpClient.Send(data, data.Length, clientIdToEndpoint[clientId]);
-            Debug.Log($"Sent {playersData.players.Count} existing players to {clientId}");
         }
     }
 
@@ -487,7 +491,6 @@ public class NetworkManager : MonoBehaviour
         {
             byte[] data = NetworkProtocolBinary.SerializeExistingBalls(ballsData);
             udpClient.Send(data, data.Length, clientIdToEndpoint[clientId]);
-            Debug.Log($"Sent {ballsData.balls.Count} existing balls to {clientId}");
         }
     }
 
@@ -525,6 +528,71 @@ public class NetworkManager : MonoBehaviour
         }
     }
 
+    public void SendBallEquip(string ballId, string playerId)
+    {
+        if (!isConnected) return;
+
+        BallEquipData equipData = new BallEquipData
+        {
+            ballId = ballId,
+            playerId = playerId
+        };
+
+        byte[] data = NetworkProtocolBinary.SerializeBallEquip(equipData);
+
+        if (isHost)
+        {
+            SendToAllClients(data);
+        }
+        else
+        {
+            SendToHost(data);
+        }
+    }
+    
+    void HandleBallEquipFromClient(byte[] data, IPEndPoint sender)
+    {
+        BallEquipData equipData = NetworkProtocolBinary.DeserializeBallEquip(data);
+        
+        ExecuteOnMainThread(() =>
+        {
+            if (ballManager != null)
+            {
+                ballManager.EquipBallNetworked(equipData.ballId, equipData.playerId);
+            }
+        });
+        
+        SendToAllClientsExcept(data, sender);
+    }
+    
+    void HandleBallEquipUpdate(byte[] data)
+    {
+        BallEquipData equipData = NetworkProtocolBinary.DeserializeBallEquip(data);
+        
+        ExecuteOnMainThread(() =>
+        {
+            if (ballManager != null)
+            {
+                ballManager.EquipBallNetworked(equipData.ballId, equipData.playerId);
+            }
+        });
+    }
+
+    public void SendMyPlayerTransform(string playerId, Vector3 pos, Quaternion rot)
+    {
+        if (!isConnected || isHost) return;
+
+        PlayerTransformData transform = new PlayerTransformData
+        {
+            playerId = playerId,
+            position = pos,
+            rotation = rot
+        };
+
+        byte[] data = NetworkProtocolBinary.SerializePlayerTransform(transform);
+        SendToHost(data);
+    }
+    
     public int GetPlayerCount()
     {
         if (isHost)

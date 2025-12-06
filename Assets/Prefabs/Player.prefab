@@ -446,9 +446,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   walkSpeed: 5
   sprintSpeed: 8
+  acceleration: 30
+  deceleration: 20
+  airControl: 0.5
   jumpForce: 15
   gravity: -39.24
   slowedSpeed: 6
+  forwardBoost: 30
   slideSpeed: 12
   slideDuration: 0.8
   slideHeight: 0.5
