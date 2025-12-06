@@ -160,6 +160,8 @@ public class NetworkManager : MonoBehaviour
 
     #region Client
 
+    private string currentLobbyCode;
+
     public void JoinHost(string code)
     {
         isHost = false;
@@ -178,13 +180,23 @@ public class NetworkManager : MonoBehaviour
             }
 
             hostEndPoint = new IPEndPoint(IPAddress.Parse(hostIP), port);
-            StartUDP(0);
-            SendJoinMessage(code);
+            StartUDP(0); // Start socket but don't send Join yet
+            
+            currentLobbyCode = code; // Store for later
             isConnected = true;
         }
         catch (Exception e)
         {
             Debug.LogError("Error conectando: " + e.Message);
+        }
+    }
+
+    public void SendPendingJoinRequest()
+    {
+        if (!string.IsNullOrEmpty(currentLobbyCode))
+        {
+            SendJoinMessage(currentLobbyCode);
+            Debug.Log($"Sending Join Request for code: {currentLobbyCode}");
         }
     }
 

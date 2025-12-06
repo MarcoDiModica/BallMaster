@@ -32,6 +32,9 @@ public class PlayerManager : MonoBehaviour
                 }
                 else if (networkManager.isConnected)
                 {
+                     // Determine if we need to send the join request now that the scene is loaded
+                     networkManager.SendPendingJoinRequest();
+                     
                      string pendingId = networkManager.GetPendingPlayerId();
                      if(!string.IsNullOrEmpty(pendingId))
                      {

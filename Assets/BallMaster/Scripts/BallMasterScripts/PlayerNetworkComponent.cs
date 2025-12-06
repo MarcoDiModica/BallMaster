@@ -49,6 +49,15 @@ public class PlayerNetworkComponent : MonoBehaviour
             if (playerController != null) 
             {
                 playerController.enabled = false;
+                
+                // CRITIAL FIX: Disable the camera on remote players!
+                if (playerController.cameraTransform != null)
+                {
+                    playerController.cameraTransform.gameObject.SetActive(false);
+                    
+                    var listeners = playerController.cameraTransform.GetComponentsInChildren<AudioListener>();
+                    foreach(var listener in listeners) listener.enabled = false;
+                }
             }
             
             PlayerInput input = GetComponent<PlayerInput>();
@@ -67,10 +76,18 @@ public class PlayerNetworkComponent : MonoBehaviour
                 {
                     playerController.cameraTransform.gameObject.SetActive(true);
                     
+                    var listeners = playerController.cameraTransform.GetComponentsInChildren<AudioListener>();
+                    foreach(var listener in listeners) listener.enabled = true;
+                    
+                    // Safety: Disable ANY other camera in the scene to be sure
                     foreach (var cam in FindObjectsByType<Camera>(FindObjectsSortMode.None))
                     {
                         if (cam.transform != playerController.cameraTransform)
+                        {
                             cam.gameObject.SetActive(false);
+                            var l = cam.GetComponent<AudioListener>();
+                            if (l != null) l.enabled = false;
+                        }
                     }
                 }
             }
