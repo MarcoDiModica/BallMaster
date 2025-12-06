@@ -3,98 +3,68 @@ using System.Collections.Generic;
 
 public class PlayerManager : MonoBehaviour
 {
-    public static PlayerManager Instance;
+    [Header("Dependencies")]
+    [SerializeField] private NetworkManager networkManager;
+    [SerializeField] private NetworkObjectManager networkObjectManager;
 
     public GameObject playerPrefab;
     public Transform[] spawnPoints;
 
     private Dictionary<string, PlayerController> players = new Dictionary<string, PlayerController>();
-    private int nextPlayerId = 0;
-    private string myPlayerId = "";
+    private string myPlayerId;
 
     void Awake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
     }
 
     void Start()
     {
-        if (NetworkManager.Instance != null && NetworkManager.Instance.isHost)
+        if (networkManager == null)
         {
-            myPlayerId = "player_0";
-            SpawnPlayer(myPlayerId, true);
-        }
-    }
-
-    public void SpawnPlayer(string playerId, bool isLocal)
-    {
-        if (players.ContainsKey(playerId))
-        {
-            Debug.LogWarning($"{playerId} ya existe, hay un dopplerganger!");
-            return;
-        }
-
-        Vector3 spawnPos = spawnPoints.Length > 0 
-            ? spawnPoints[players.Count % spawnPoints.Length].position 
-            : Vector3.zero;
-
-        GameObject playerObj = Instantiate(playerPrefab, spawnPos, Quaternion.identity);
-        NetworkObject netObj = playerObj.GetComponent<NetworkObject>();
-        netObj.objectId = playerId;
-
-        PlayerController controller = playerObj.GetComponent<PlayerController>();
-        
-        if (isLocal)
-        {
-            controller.SetAsLocalPlayer();
-            myPlayerId = playerId;
-        }
-        else
-        {
-            controller.SetAsRemotePlayer();
-        }
-
-        players[playerId] = controller;
-        
-        if (NetworkObjectManager.Instance != null)
-        {
-            NetworkObjectManager.Instance.RegisterNetworkObject(netObj);
+            networkManager = FindFirstObjectByType<NetworkManager>();
+            if (networkManager != null)
+            {
+                networkManager.RegisterPlayerManager(this);
+                
+                if (networkManager.isHost)
+                {
+                    SpawnPlayer("Host", true);
+                }
+                else if (networkManager.isConnected)
+                {
+                     string pendingId = networkManager.GetPendingPlayerId();
+                     if(!string.IsNullOrEmpty(pendingId))
+                     {
+                         ReceiveMyPlayerId(pendingId);
+                     }
+                }
+            }
         }
     }
 
     public void HandleClientJoined(string clientId)
     {
-        if (!NetworkManager.Instance.isHost) return;
-
-        nextPlayerId++;
-        string playerId = "player_" + nextPlayerId;
-        
-        ExistingPlayersData existingPlayers = new ExistingPlayersData();
-        foreach (var kvp in players)
+        if (networkManager != null && networkManager.isHost)
         {
-            existingPlayers.players.Add(new ExistingPlayerData
+            ExistingPlayersData data = new ExistingPlayersData();
+            foreach (var kvp in players)
             {
-                playerId = kvp.Key,
-                position = kvp.Value.transform.position,
-                rotation = kvp.Value.transform.rotation
-            });
+                PlayerController pc = kvp.Value;
+                data.players.Add(new ExistingPlayerData
+                {
+                    playerId = kvp.Key,
+                    position = pc.transform.position,
+                    rotation = pc.transform.rotation
+                });
+            }
+            
+            networkManager.SendExistingPlayersToClient(clientId, data);
+            
+            string newPlayerId = "Player_" + clientId;
+            networkManager.SendPlayerIdToClient(clientId, newPlayerId);
+            
+            SpawnPlayer(newPlayerId, false); 
         }
-        
-        if (existingPlayers.players.Count > 0)
-        {
-            NetworkManager.Instance.SendExistingPlayersToClient(clientId, existingPlayers);
-        }
-        
-        SpawnPlayer(playerId, false);
-        
-        NetworkManager.Instance.SendPlayerIdToClient(clientId, playerId);
     }
 
     public void ReceiveMyPlayerId(string playerId)
@@ -103,33 +73,56 @@ public class PlayerManager : MonoBehaviour
         SpawnPlayer(playerId, true);
     }
 
+    public void SpawnPlayer(string playerId, bool isLocal)
+    {
+        if (players.ContainsKey(playerId)) return;
+
+        int spawnIndex = Random.Range(0, spawnPoints.Length);
+        Vector3 spawnPos = spawnPoints[spawnIndex].position;
+
+        GameObject playerObj = Instantiate(playerPrefab, spawnPos, Quaternion.identity);
+        
+        PlayerController controller = playerObj.GetComponent<PlayerController>();
+        if (controller != null)
+        {
+            controller.Initialize(this); 
+        }
+
+        NetworkObject netObj = playerObj.GetComponent<NetworkObject>();
+        if (netObj != null)
+        {
+            netObj.objectId = playerId;
+            if (networkObjectManager != null)
+            {
+                networkObjectManager.RegisterNetworkObject(netObj);
+            }
+        }
+        
+        PlayerNetworkComponent netComp = playerObj.GetComponent<PlayerNetworkComponent>();
+        if (netComp != null)
+        {
+            netComp.Initialize(isLocal);
+        }
+
+        players[playerId] = controller;
+    }
+
     public void SpawnExistingPlayers(ExistingPlayersData playersData)
     {
-        foreach (var playerData in playersData.players)
+        foreach (var pData in playersData.players)
         {
-            if (!players.ContainsKey(playerData.playerId))
+            if (pData.playerId == myPlayerId) continue;
+            
+            if (!players.ContainsKey(pData.playerId))
             {
-                GameObject playerObj = Instantiate(playerPrefab, playerData.position, playerData.rotation);
-                NetworkObject netObj = playerObj.GetComponent<NetworkObject>();
-                netObj.objectId = playerData.playerId;
-
-                PlayerController controller = playerObj.GetComponent<PlayerController>();
-                controller.SetAsRemotePlayer();
+                SpawnPlayer(pData.playerId, false);
                 
-                players[playerData.playerId] = controller;
-                
-                if (NetworkObjectManager.Instance != null)
+                if (players.ContainsKey(pData.playerId))
                 {
-                    NetworkObjectManager.Instance.RegisterNetworkObject(netObj);
+                    players[pData.playerId].transform.position = pData.position;
+                    players[pData.playerId].transform.rotation = pData.rotation;
                 }
             }
         }
     }
-
-    public Dictionary<string, PlayerController> GetAllPlayers()
-    {
-        return players;
-    }
-
-    // En cada player debería haber un Replicador
 }

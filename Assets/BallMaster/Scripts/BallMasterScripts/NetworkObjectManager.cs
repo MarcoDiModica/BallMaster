@@ -4,24 +4,11 @@ using System.Linq;
 
 public class NetworkObjectManager : MonoBehaviour
 {
-    public static NetworkObjectManager Instance;
-
     private Dictionary<string, NetworkObject> networkObjects = new Dictionary<string, NetworkObject>();
 
     void Awake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-        }
-        else
-        {
-            Destroy(gameObject);
-            return;
-        }
-
         RefreshNetworkObjects();
-    
         Debug.Log($"NetworkObjectManager initialized with {networkObjects.Count} objects.");
     }
 
@@ -37,8 +24,20 @@ public class NetworkObjectManager : MonoBehaviour
                 networkObjects[obj.objectId] = obj;
             }
         }
-        
-        Debug.Log($"Refreshed NetworkObjectManager: {networkObjects.Count} objects tracked.");
+    }
+    
+    public IEnumerable<NetworkObject> GetAllNetworkObjects()
+    {
+        return networkObjects.Values;
+    }
+
+    void Start()
+    {
+        NetworkManager nm = FindFirstObjectByType<NetworkManager>();
+        if (nm != null)
+        {
+            nm.RegisterNetworkObjectManager(this);
+        }
     }
 
     public void RegisterNetworkObject(NetworkObject obj)
@@ -52,7 +51,6 @@ public class NetworkObjectManager : MonoBehaviour
         if (!networkObjects.ContainsKey(obj.objectId))
         {
             networkObjects[obj.objectId] = obj;
-            Debug.Log($"Registered NetworkObject: {obj.objectId}");
         }
     }
 
@@ -61,7 +59,6 @@ public class NetworkObjectManager : MonoBehaviour
         if (networkObjects.ContainsKey(objectId))
         {
             networkObjects.Remove(objectId);
-            Debug.Log($"Unregistered NetworkObject: {objectId}");
         }
     }
 

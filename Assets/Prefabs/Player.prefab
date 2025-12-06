@@ -89,6 +89,7 @@ MeshRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!65 &2691223631594168054
 BoxCollider:
@@ -265,6 +266,8 @@ GameObject:
   - component: {fileID: 7263603218876691550}
   - component: {fileID: 2563579776950546348}
   - component: {fileID: 1063790112169523066}
+  - component: {fileID: 5054427174947898379}
+  - component: {fileID: 2484707744291602158}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -344,6 +347,7 @@ MeshRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!136 &4749641719158914115
 CapsuleCollider:
@@ -427,8 +431,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NetworkObject
   objectId: player_1
-  useInterpolation: 1
-  interpolationSpeed: 15
+  isDirty: 0
 --- !u!114 &1063790112169523066
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -441,17 +444,55 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aed90f0d68c1a804f886a914d5f45ce2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
-  speed: 8
+  walkSpeed: 5
+  sprintSpeed: 8
   jumpForce: 15
   gravity: -39.24
-  mouseSensitivity: 0.2
-  networkSendRate: 0.05
+  slowedSpeed: 6
+  slideSpeed: 12
+  slideDuration: 0.8
+  slideHeight: 0.5
+  slideCooldown: 1
+  dashForce: 20
+  dashDuration: 0.2
+  airDashCooldown: 1
   groundCheckDistance: 0.2
   coyoteTime: 0.15
   jumpBufferTime: 0.2
+  tiltAngle: 1.6
+  tiltSpeed: 8
+  bobFrequency: 15
+  bobAmplitude: 0.1
+  slideCameraDrop: 0.5
   cameraTransform: {fileID: 3501495713854449566}
   ballEquipTransform: {fileID: 4615012381204673833}
-  slowedSpeed: 6
+--- !u!114 &5054427174947898379
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6600956380747670767}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3cb32d68d8d4e2d4fbbd44d87373df28, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerNetworkComponent
+  interpolationSpeed: 15
+--- !u!114 &2484707744291602158
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6600956380747670767}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5285e2fe629cb594aa3477ace429284d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerInput
+  mouseSensitivity: 0.2
+  gamepadSensitivity: 100
 --- !u!1 &8618201539721975886
 GameObject:
   m_ObjectHideFlags: 0

@@ -5,6 +5,8 @@ using TMPro;
 
 public class MenuUI : MonoBehaviour
 {
+    [SerializeField] private NetworkManager networkManager;
+
     [Header("Botones")]
     public Button hostButton;
     public Button joinButton;
@@ -28,7 +30,7 @@ public class MenuUI : MonoBehaviour
 
     void OnHostClicked()
     {
-        NetworkManager.Instance.StartHost();
+        networkManager.StartHost();
         SceneManager.LoadScene("Map_1");
     }
 
@@ -47,7 +49,7 @@ public class MenuUI : MonoBehaviour
             return;
         }
 
-        NetworkManager.Instance.JoinHost(code);
+        networkManager.JoinHost(code);
         SceneManager.LoadScene("Map_1");
     }
 

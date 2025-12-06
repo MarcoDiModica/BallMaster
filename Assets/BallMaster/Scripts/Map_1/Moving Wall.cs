@@ -13,17 +13,18 @@ public class MovingWall : MonoBehaviour
     private Vector3 posicionInicial;
     private NetworkObject networkObject;
 
+    [SerializeField] private NetworkManager networkManager;
+
     void Start()
     {
         posicionInicial = transform.position;
         networkObject = GetComponent<NetworkObject>();
 
-        if (NetworkManager.Instance != null && NetworkManager.Instance.isHost)
+        if (networkManager != null && networkManager.isHost)
         {
             if (string.IsNullOrEmpty(networkObject.objectId))
             {
                 networkObject.objectId = "MovingWall_" + GetInstanceID();
-                Debug.LogWarning($"Asignado objectId temporal a MovingWall: {networkObject.objectId}");
             }
             StartCoroutine(BajarDespuesDeTiempoCoroutine());
         }

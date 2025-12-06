@@ -34,6 +34,15 @@ public class Ball : MonoBehaviour
         rb.interpolation = RigidbodyInterpolation.Interpolate;
     }
 
+    private BallManager ballManager;
+    private NetworkObjectManager networkObjectManager;
+
+    public void Initialize(BallManager bManager, NetworkObjectManager noManager)
+    {
+        this.ballManager = bManager;
+        this.networkObjectManager = noManager;
+    }
+
     public void Launch(Vector3 direction, string launcherId, Vector3? launchPosition = null)
     {
         currentState = BallState.Hot;
@@ -57,9 +66,9 @@ public class Ball : MonoBehaviour
         
         GetComponent<Collider>().enabled = true;
         
-        if (NetworkObjectManager.Instance != null)
+        if (networkObjectManager != null)
         {
-            NetworkObject launcher = NetworkObjectManager.Instance.GetNetworkObject(launcherId);
+            NetworkObject launcher = networkObjectManager.GetNetworkObject(launcherId);
             if (launcher != null)
             {
                 Collider launcherCollider = launcher.GetComponent<Collider>();
@@ -173,10 +182,9 @@ public class Ball : MonoBehaviour
                 
                 if (playerNetObj != null && playerNetObj.objectId != ownerPlayerId)
                 {
-                    if (NetworkManager.Instance.isHost)
+                    if (ballManager != null)
                     {
-                        player.Respawn();
-                        RespawnBall();
+                        ballManager.OnBallHitPlayer(player);
                     }
                     return;
                 }
@@ -207,9 +215,9 @@ public class Ball : MonoBehaviour
 
     void RespawnBall()
     {
-        if (BallManager.Instance != null)
+        if (ballManager != null)
         {
-            BallManager.Instance.RespawnBall(networkObject.objectId);
+            ballManager.RespawnBall(networkObject.objectId);
         }
     }
 

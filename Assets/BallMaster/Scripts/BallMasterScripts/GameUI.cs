@@ -16,11 +16,15 @@ public class GameUI : MonoBehaviour
 
     [Header("Paneles")]
     public GameObject pauseMenuPanel;
+    
+    [SerializeField] private NetworkManager networkManager;
 
     private PlayerController localPlayer;
 
     void Start()
     {
+        networkManager = FindObjectOfType<NetworkManager>();
+
         backButton.onClick.AddListener(OnBackClicked);
 
         if (copyCodeButton != null)
@@ -34,21 +38,21 @@ public class GameUI : MonoBehaviour
 
     void Update()
     {
-        if (NetworkManager.Instance == null)
+        if (networkManager == null)
             return;
 
         if (statusText != null)
         {
-            string role = NetworkManager.Instance.isHost ? "HOST" : "CLIENTE";
-            int players = NetworkManager.Instance.GetPlayerCount();
+            string role = networkManager.isHost ? "HOST" : "CLIENTE";
+            int players = networkManager.GetPlayerCount();
             statusText.text = $"Rol: {role}\nJugadores: {players}";
         }
 
         if (codeText != null)
         {
-            if (NetworkManager.Instance.isHost)
+            if (networkManager.isHost)
             {
-                codeText.text = NetworkManager.Instance.lobbyCode;
+                codeText.text = networkManager.lobbyCode;
             }
             else
             {
@@ -58,10 +62,10 @@ public class GameUI : MonoBehaviour
 
         if (copyCodeButton != null)
         {
-            copyCodeButton.gameObject.SetActive(NetworkManager.Instance.isHost);
+            copyCodeButton.gameObject.SetActive(networkManager.isHost);
         }
         
-        if (Keyboard.current.escapeKey.wasPressedThisFrame)
+        if (Keyboard.current.pKey.wasPressedThisFrame || Keyboard.current.escapeKey.wasPressedThisFrame)
         {
             TogglePause();
         }
@@ -83,13 +87,13 @@ public class GameUI : MonoBehaviour
             Cursor.visible = false;
         }
         
-        // Buscar el jugador local y pausar sus controles
         if (localPlayer == null)
         {
             PlayerController[] players = FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
             foreach (var player in players)
             {
-                if (player.IsLocalPlayer())
+                PlayerNetworkComponent netComp = player.GetComponent<PlayerNetworkComponent>();
+                if (netComp != null && netComp.IsLocalPlayer)
                 {
                     localPlayer = player;
                     break;
@@ -105,10 +109,9 @@ public class GameUI : MonoBehaviour
 
     void OnCopyCodeClicked()
     {
-        if (NetworkManager.Instance.isHost && !string.IsNullOrEmpty(NetworkManager.Instance.lobbyCode))
+        if (networkManager != null && networkManager.isHost && !string.IsNullOrEmpty(networkManager.lobbyCode))
         {
-            GUIUtility.systemCopyBuffer = NetworkManager.Instance.lobbyCode;
-            Debug.Log("Código copiado: " + NetworkManager.Instance.lobbyCode);
+            GUIUtility.systemCopyBuffer = networkManager.lobbyCode;
             
             if (copyCodeButton != null)
             {
@@ -131,7 +134,10 @@ public class GameUI : MonoBehaviour
 
     void OnBackClicked()
     {
-        NetworkManager.Instance.Disconnect();
+        if (networkManager != null)
+        {
+            networkManager.Disconnect();
+        }
         SceneManager.LoadScene("Main_Menu");
     }
 }

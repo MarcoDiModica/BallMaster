@@ -7,7 +7,9 @@ using UnityEngine;
 
 public class NetworkManager : MonoBehaviour
 {
-    public static NetworkManager Instance;
+    private PlayerManager playerManager;
+    private BallManager ballManager;
+    private NetworkObjectManager networkObjectManager;
 
     [Header("Config")]
     public int port = 4567;
@@ -24,26 +26,71 @@ public class NetworkManager : MonoBehaviour
     private Thread receiveThread;
     private bool running = false;
     private IPEndPoint hostEndPoint;
-
+    
     void Awake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
+        var managers = FindObjectsByType<NetworkManager>(FindObjectsSortMode.None);
+        if (managers.Length > 1)
         {
             Destroy(gameObject);
+            return;
+        }
+        
+        DontDestroyOnLoad(gameObject);
+    }
+    
+    public void RegisterPlayerManager(PlayerManager pm) { playerManager = pm; }
+    public void RegisterBallManager(BallManager bm) { ballManager = bm; }
+    public void RegisterNetworkObjectManager(NetworkObjectManager nom) { networkObjectManager = nom; }
+
+    private readonly Queue<Action> mainThreadActions = new Queue<Action>();
+
+    public void ExecuteOnMainThread(Action action)
+    {
+        lock (mainThreadActions)
+        {
+            mainThreadActions.Enqueue(action);
         }
     }
 
     void Update()
     {
-        if (isHost && isConnected && connectedClients.Count > 0)
+        lock (mainThreadActions)
         {
-            SyncGameState();
+            while (mainThreadActions.Count > 0)
+            {
+                mainThreadActions.Dequeue()?.Invoke();
+            }
         }
+
+        if (isHost && isConnected)
+        {
+            if (networkObjectManager != null)
+            {
+                foreach (var obj in networkObjectManager.GetAllNetworkObjects())
+                {
+                    if (obj.isDirty)
+                    {
+                        SendObjectUpdate(obj);
+                        obj.isDirty = false;
+                    }
+                }
+            }
+        }
+    }
+    
+    void SendObjectUpdate(NetworkObject obj)
+    {
+         GameStateData state = new GameStateData();
+         state.objects.Add(new ObjectState
+         {
+             objectId = obj.objectId,
+             position = obj.transform.position,
+             rotation = obj.transform.rotation
+         });
+         
+         byte[] data = NetworkProtocolBinary.SerializeGameState(state);
+         SendToAllClients(data);
     }
 
     #region Host
@@ -60,10 +107,10 @@ public class NetworkManager : MonoBehaviour
 
     void SyncGameState()
     {
-        GameStateData state = new GameStateData();
-        NetworkObject[] objects = FindObjectsByType<NetworkObject>(FindObjectsSortMode.None);
+        if (networkObjectManager == null) return;
 
-        foreach (NetworkObject obj in objects)
+        GameStateData state = new GameStateData();
+        foreach (NetworkObject obj in networkObjectManager.GetAllNetworkObjects())
         {
             state.objects.Add(new ObjectState
             {
@@ -236,16 +283,16 @@ public class NetworkManager : MonoBehaviour
             connectedClients[clientId] = client;
             clientIdToEndpoint[clientId] = client;
 
-            UnityMainThread.ExecuteInUpdate(() =>
+            ExecuteOnMainThread(() =>
             {
-                if (PlayerManager.Instance != null)
+                if (playerManager != null)
                 {
-                    PlayerManager.Instance.HandleClientJoined(clientId);
+                    playerManager.HandleClientJoined(clientId);
                 }
 
-                if (BallManager.Instance != null)
+                if (ballManager != null)
                 {
-                    ExistingBallsData existingBalls = BallManager.Instance.GetExistingBallsData();
+                    ExistingBallsData existingBalls = ballManager.GetExistingBallsData();
                     if (existingBalls.balls.Count > 0)
                     {
                         SendExistingBallsToClient(clientId, existingBalls);
@@ -259,11 +306,11 @@ public class NetworkManager : MonoBehaviour
     {
         GameStateData state = NetworkProtocolBinary.DeserializeGameState(data);
 
-        UnityMainThread.ExecuteInUpdate(() =>
+        ExecuteOnMainThread(() =>
         {
-            if (NetworkObjectManager.Instance != null)
+            if (networkObjectManager != null)
             {
-                NetworkObjectManager.Instance.ApplyGameState(state);
+                networkObjectManager.ApplyGameState(state);
             }
         });
     }
@@ -272,11 +319,11 @@ public class NetworkManager : MonoBehaviour
     {
         PlayerTransformData transform = NetworkProtocolBinary.DeserializePlayerTransform(data);
 
-        UnityMainThread.ExecuteInUpdate(() =>
+        ExecuteOnMainThread(() =>
         {
-            if (NetworkObjectManager.Instance != null)
+            if (networkObjectManager != null)
             {
-                NetworkObject netObj = NetworkObjectManager.Instance.GetNetworkObject(transform.playerId);
+                NetworkObject netObj = networkObjectManager.GetNetworkObject(transform.playerId);
                 if (netObj != null)
                 {
                     netObj.UpdateState(transform.position, transform.rotation);
@@ -291,11 +338,11 @@ public class NetworkManager : MonoBehaviour
     {
         PlayerTransformData transform = NetworkProtocolBinary.DeserializePlayerTransform(data);
 
-        UnityMainThread.ExecuteInUpdate(() =>
+        ExecuteOnMainThread(() =>
         {
-            if (NetworkObjectManager.Instance != null)
+            if (networkObjectManager != null)
             {
-                NetworkObject netObj = NetworkObjectManager.Instance.GetNetworkObject(transform.playerId);
+                NetworkObject netObj = networkObjectManager.GetNetworkObject(transform.playerId);
                 if (netObj != null)
                 {
                     netObj.UpdateState(transform.position, transform.rotation);
@@ -304,15 +351,26 @@ public class NetworkManager : MonoBehaviour
         });
     }
 
+    private string pendingPlayerId;
+
+    public string GetPendingPlayerId()
+    {
+        return pendingPlayerId;
+    }
+
     void HandleAssignPlayerId(byte[] data)
     {
         string playerId = NetworkProtocolBinary.DeserializeString(data);
 
-        UnityMainThread.ExecuteInUpdate(() =>
+        ExecuteOnMainThread(() =>
         {
-            if (PlayerManager.Instance != null)
+            if (playerManager != null)
             {
-                PlayerManager.Instance.ReceiveMyPlayerId(playerId);
+                playerManager.ReceiveMyPlayerId(playerId);
+            }
+            else
+            {
+                pendingPlayerId = playerId;
             }
         });
     }
@@ -321,11 +379,11 @@ public class NetworkManager : MonoBehaviour
     {
         ExistingPlayersData playersData = NetworkProtocolBinary.DeserializeExistingPlayers(data);
 
-        UnityMainThread.ExecuteInUpdate(() =>
+        ExecuteOnMainThread(() =>
         {
-            if (PlayerManager.Instance != null)
+            if (playerManager != null)
             {
-                PlayerManager.Instance.SpawnExistingPlayers(playersData);
+                playerManager.SpawnExistingPlayers(playersData);
             }
         });
     }
@@ -334,11 +392,11 @@ public class NetworkManager : MonoBehaviour
     {
         ExistingBallsData ballsData = NetworkProtocolBinary.DeserializeExistingBalls(data);
 
-        UnityMainThread.ExecuteInUpdate(() =>
+        ExecuteOnMainThread(() =>
         {
-            if (BallManager.Instance != null)
+            if (ballManager != null)
             {
-                BallManager.Instance.SpawnExistingBalls(ballsData);
+                ballManager.SpawnExistingBalls(ballsData);
             }
         });
     }
@@ -347,11 +405,11 @@ public class NetworkManager : MonoBehaviour
     {
         List<BallStateData> ballStates = NetworkProtocolBinary.DeserializeBallStates(data);
 
-        UnityMainThread.ExecuteInUpdate(() =>
+        ExecuteOnMainThread(() =>
         {
-            if (BallManager.Instance != null)
+            if (ballManager != null)
             {
-                BallManager.Instance.ApplyBallStates(ballStates);
+                ballManager.ApplyBallStates(ballStates);
             }
         });
     }
@@ -360,11 +418,11 @@ public class NetworkManager : MonoBehaviour
     {
         BallLaunchData launchData = NetworkProtocolBinary.DeserializeBallLaunch(data);
 
-        UnityMainThread.ExecuteInUpdate(() =>
+        ExecuteOnMainThread(() =>
         {
-            if (BallManager.Instance != null)
+            if (ballManager != null)
             {
-                Ball ball = BallManager.Instance.GetBall(launchData.ballId);
+                Ball ball = ballManager.GetBall(launchData.ballId);
                 if (ball != null)
                 {
                     ball.Launch(launchData.direction, launchData.launcherId, launchData.launchPosition);
@@ -379,11 +437,11 @@ public class NetworkManager : MonoBehaviour
     {
         BallLaunchData launchData = NetworkProtocolBinary.DeserializeBallLaunch(data);
 
-        UnityMainThread.ExecuteInUpdate(() =>
+        ExecuteOnMainThread(() =>
         {
-            if (BallManager.Instance != null)
+            if (ballManager != null)
             {
-                Ball ball = BallManager.Instance.GetBall(launchData.ballId);
+                Ball ball = ballManager.GetBall(launchData.ballId);
                 if (ball != null)
                 {
                     ball.Launch(launchData.direction, launchData.launcherId, launchData.launchPosition);
@@ -422,6 +480,50 @@ public class NetworkManager : MonoBehaviour
     }
 
     #endregion
+
+    public void SendBallStates(List<BallStateData> ballStates)
+    {
+        if (!isConnected || !isHost) return;
+
+        byte[] data = NetworkProtocolBinary.SerializeBallStates(ballStates);
+        SendToAllClients(data);
+    }
+    
+    public void SendBallLaunch(string ballId, Vector3 direction, string launcherId, Vector3 launchPosition)
+    {
+        if (!isConnected) return;
+
+        BallLaunchData launchData = new BallLaunchData
+        {
+            ballId = ballId,
+            direction = direction,
+            launcherId = launcherId,
+            launchPosition = launchPosition
+        };
+
+        byte[] data = NetworkProtocolBinary.SerializeBallLaunch(launchData);
+
+        if (isHost)
+        {
+            SendToAllClients(data);
+        }
+        else
+        {
+            SendToHost(data);
+        }
+    }
+
+    public int GetPlayerCount()
+    {
+        if (isHost)
+        {
+            return connectedClients.Count + 1;
+        }
+        else
+        {
+            return isConnected ? 2 : 0;
+        }
+    }
 
     #region Utils
 
@@ -542,77 +644,6 @@ public class NetworkManager : MonoBehaviour
     void OnApplicationQuit()
     {
         Disconnect();
-    }
-
-    #endregion
-
-    #region Public API
-
-    public void SendPlayerTransform(string playerId, Vector3 position, Quaternion rotation)
-    {
-        if (!isConnected) return;
-
-        PlayerTransformData transform = new PlayerTransformData
-        {
-            playerId = playerId,
-            position = position,
-            rotation = rotation
-        };
-
-        byte[] data = NetworkProtocolBinary.SerializePlayerTransform(transform);
-        
-        if (isHost)
-        {
-            SendToAllClients(data);
-        }
-        else
-        {
-            SendToHost(data);
-        }
-    }
-
-    public int GetPlayerCount()
-    {
-        if (isHost)
-        {
-            return connectedClients.Count + 1;
-        }
-        else
-        {
-            return isConnected ? 2 : 0;
-        }
-    }
-
-    public void SendBallStates(List<BallStateData> ballStates)
-    {
-        if (!isConnected || !isHost) return;
-
-        byte[] data = NetworkProtocolBinary.SerializeBallStates(ballStates);
-        SendToAllClients(data);
-    }
-
-    public void SendBallLaunch(string ballId, Vector3 direction, string launcherId, Vector3 launchPosition)
-    {
-        if (!isConnected) return;
-
-        BallLaunchData launchData = new BallLaunchData
-        {
-            ballId = ballId,
-            direction = direction,
-            launcherId = launcherId,
-            launchPosition = launchPosition
-        };
-
-        byte[] data = NetworkProtocolBinary.SerializeBallLaunch(launchData);
-
-        if (isHost)
-        {
-            SendToAllClients(data);
-        }
-        else
-        {
-            SendToHost(data);
-        }
     }
 
     #endregion

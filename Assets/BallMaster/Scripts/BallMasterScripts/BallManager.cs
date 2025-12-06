@@ -3,31 +3,29 @@ using System.Collections.Generic;
 
 public class BallManager : MonoBehaviour
 {
-    public static BallManager Instance;
+    [Header("Dependencies")]
+    [SerializeField] private NetworkManager networkManager;
+    [SerializeField] private NetworkObjectManager networkObjectManager;
 
     public GameObject ballPrefab;
     public Transform[] ballSpawnPoints;
-    public float networkSendRate = 0.05f;
-
+    
     private Dictionary<string, Ball> balls = new Dictionary<string, Ball>();
     private int nextBallId = 0;
-    private float nextSendTime = 0f;
-
-    void Awake()
-    {
-        if (Instance == null)
-        {
-            Instance = this;
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
-    }
-
+    
+    
     void Start()
     {
-        if (NetworkManager.Instance != null && NetworkManager.Instance.isHost)
+        if (networkManager == null)
+        {
+            networkManager = FindFirstObjectByType<NetworkManager>();
+            if (networkManager != null)
+            {
+                networkManager.RegisterBallManager(this);
+            }
+        }
+
+        if (networkManager != null && networkManager.isHost)
         {
             SpawnInitialBalls();
         }
@@ -35,12 +33,33 @@ public class BallManager : MonoBehaviour
 
     void Update()
     {
-        if (NetworkManager.Instance != null && NetworkManager.Instance.isHost)
+        if (networkManager != null && networkManager.isHost)
         {
-            if (Time.time >= nextSendTime)
+            List<BallStateData> dirtyBalls = new List<BallStateData>();
+            
+            foreach(var ball in balls.Values)
             {
-                SyncAllBalls();
-                nextSendTime = Time.time + networkSendRate;
+                if(ball.currentState == Ball.BallState.Hot || ball.transform.hasChanged)
+                {
+                    ball.transform.hasChanged = false;
+                    
+                    Rigidbody rb = ball.GetComponent<Rigidbody>();
+                    dirtyBalls.Add(new BallStateData
+                    {
+                        ballId = ball.GetComponent<NetworkObject>().objectId,
+                        position = ball.transform.position,
+                        rotation = ball.transform.rotation,
+                        velocity = rb.linearVelocity,
+                        state = (byte)ball.currentState,
+                        ownerPlayerId = ball.ownerPlayerId,
+                        bounceCount = ball.maxBouncesWithoutGravity
+                    });
+                }
+            }
+            
+            if (dirtyBalls.Count > 0)
+            {
+                networkManager.SendBallStates(dirtyBalls);
             }
         }
     }
@@ -58,7 +77,6 @@ public class BallManager : MonoBehaviour
     {
         if (balls.ContainsKey(ballId))
         {
-            Debug.LogWarning($"Ball {ballId} already exists");
             return;
         }
 
@@ -67,11 +85,12 @@ public class BallManager : MonoBehaviour
         netObj.objectId = ballId;
 
         Ball ball = ballObj.GetComponent<Ball>();
+        ball.Initialize(this, networkObjectManager);
         balls[ballId] = ball;
 
-        if (NetworkObjectManager.Instance != null)
+        if (networkObjectManager != null)
         {
-            NetworkObjectManager.Instance.RegisterNetworkObject(netObj);
+            networkObjectManager.RegisterNetworkObject(netObj);
         }
     }
 
@@ -95,30 +114,16 @@ public class BallManager : MonoBehaviour
         rb.isKinematic = true;
     }
 
-    void SyncAllBalls()
+    public void OnBallHitPlayer(PlayerController player)
     {
-        List<BallStateData> ballStates = new List<BallStateData>();
-
-        foreach (var kvp in balls)
+        if (networkManager != null && networkManager.isHost)
         {
-            Ball ball = kvp.Value;
-            Rigidbody rb = ball.GetComponent<Rigidbody>();
-
-            ballStates.Add(new BallStateData
-            {
-                ballId = kvp.Key,
-                position = ball.transform.position,
-                rotation = ball.transform.rotation,
-                velocity = rb.linearVelocity,
-                state = (byte)ball.currentState,
-                ownerPlayerId = ball.ownerPlayerId,
-                bounceCount = ball.maxBouncesWithoutGravity
-            });
-        }
-
-        if (ballStates.Count > 0 && NetworkManager.Instance != null)
-        {
-            NetworkManager.Instance.SendBallStates(ballStates);
+             player.RequestRespawn();
+             
+             foreach(var ball in balls.Values)
+             {
+                 if(ball.ownerPlayerId == "") continue;
+             }
         }
     }
 
@@ -189,9 +194,9 @@ public class BallManager : MonoBehaviour
 
                 balls[ballData.ballId] = ball;
 
-                if (NetworkObjectManager.Instance != null)
+                if (networkObjectManager != null)
                 {
-                    NetworkObjectManager.Instance.RegisterNetworkObject(netObj);
+                    networkObjectManager.RegisterNetworkObject(netObj);
                 }
             }
         }
