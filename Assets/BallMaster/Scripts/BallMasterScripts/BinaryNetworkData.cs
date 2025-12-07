@@ -17,7 +17,10 @@ public enum MessageType : byte
     SyncExistingBalls,
     BallLaunched,
     BallEquip,
-    Replication
+    Replication,
+    Heartbeat,
+    HeartbeatAck,
+    PlayerSpawned
 }
 
 public class PlayerTransformData
@@ -148,6 +151,16 @@ public static class NetworkProtocolBinary
         });
     }
 
+    public static byte[] SerializePlayerSpawned(ExistingPlayerData playerData)
+    {
+        return Serialize(MessageType.PlayerSpawned, (writer) =>
+        {
+            writer.Write(playerData.playerId);
+            WriteVector3(writer, playerData.position);
+            WriteQuaternion(writer, playerData.rotation);
+        });
+    }
+
     public static byte[] SerializeExistingBalls(ExistingBallsData ballsData)
     {
         return Serialize(MessageType.SyncExistingBalls, (writer) =>
@@ -257,6 +270,21 @@ public static class NetworkProtocolBinary
             }
         }
         return playersData;
+    }
+
+    public static ExistingPlayerData DeserializePlayerSpawned(byte[] data)
+    {
+        using (MemoryStream stream = new MemoryStream(data))
+        using (BinaryReader reader = new BinaryReader(stream))
+        {
+            reader.ReadByte();
+            return new ExistingPlayerData
+            {
+                playerId = reader.ReadString(),
+                position = ReadVector3(reader),
+                rotation = ReadQuaternion(reader)
+            };
+        }
     }
 
     public static ExistingBallsData DeserializeExistingBalls(byte[] data)

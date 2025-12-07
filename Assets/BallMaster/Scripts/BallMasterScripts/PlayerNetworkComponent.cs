@@ -14,11 +14,13 @@ public class PlayerNetworkComponent : MonoBehaviour
     
     private NetworkObject networkObject;
     private PlayerController playerController;
+    private NetworkManager cachedNetworkManager;
 
     void Awake()
     {
         networkObject = GetComponent<NetworkObject>();
         playerController = GetComponent<PlayerController>();
+        cachedNetworkManager = FindFirstObjectByType<NetworkManager>();
         
         targetPosition = transform.position;
         targetRotation = transform.rotation;
@@ -92,13 +94,9 @@ public class PlayerNetworkComponent : MonoBehaviour
                 }
             }
             
-            if (IsClientOnly())
+            if (IsClientOnly() && networkObject != null)
             {
-                 var nm = FindFirstObjectByType<NetworkManager>();
-                 if (nm != null && networkObject != null)
-                 {
-                      nm.SendMyPlayerTransform(networkObject.objectId, transform.position, transform.rotation);
-                 }
+                cachedNetworkManager.SendMyPlayerTransform(networkObject.objectId, transform.position, transform.rotation);
             }
         }
     }
@@ -125,11 +123,7 @@ public class PlayerNetworkComponent : MonoBehaviour
                     
                     if (IsClientOnly())
                     {
-                        var nm = FindFirstObjectByType<NetworkManager>();
-                        if (nm != null)
-                        {
-                            nm.SendMyPlayerTransform(networkObject.objectId, transform.position, transform.rotation);
-                        }
+                        cachedNetworkManager.SendMyPlayerTransform(networkObject.objectId, transform.position, transform.rotation);
                     }
                 }
                 OnTransformModified?.Invoke();
@@ -159,7 +153,6 @@ public class PlayerNetworkComponent : MonoBehaviour
 
     private bool IsClientOnly()
     {
-        var nm = FindFirstObjectByType<NetworkManager>();
-        return nm != null && nm.isConnected && !nm.isHost;
+        return cachedNetworkManager != null && cachedNetworkManager.isConnected && !cachedNetworkManager.isHost;
     }
 }

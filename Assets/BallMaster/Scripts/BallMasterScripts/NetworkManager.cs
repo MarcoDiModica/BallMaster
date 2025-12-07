@@ -15,7 +15,6 @@ public class NetworkManager : MonoBehaviour
 
     [Header("Config")]
     public int port = 4567;
-    public float syncRate = 0.1f;
 
     public bool isHost = false;
     public bool isConnected = false;
@@ -28,6 +27,12 @@ public class NetworkManager : MonoBehaviour
     private Thread receiveThread;
     private bool running = false;
     private IPEndPoint hostEndPoint;
+    
+    // Heartbeat system
+    private Dictionary<string, float> clientLastHeartbeat = new Dictionary<string, float>();
+    private float lastHeartbeatTime;
+    private const float HEARTBEAT_INTERVAL = 2f;
+    private const float CLIENT_TIMEOUT = 10f;
     
     void Awake()
     {
@@ -69,6 +74,14 @@ public class NetworkManager : MonoBehaviour
 
         if (isHost && isConnected)
         {
+            // Heartbeat system - send to clients and check for timeouts
+            if (Time.time - lastHeartbeatTime >= HEARTBEAT_INTERVAL)
+            {
+                SendHeartbeatToClients();
+                CheckClientTimeouts();
+                lastHeartbeatTime = Time.time;
+            }
+
             if (networkObjectManager != null)
             {
                 foreach (var obj in networkObjectManager.GetAllNetworkObjects())
@@ -170,6 +183,12 @@ public class NetworkManager : MonoBehaviour
     {
         isHost = false;
 
+        // Clean up any existing connection before reconnecting
+        if (isConnected || udpClient != null)
+        {
+            ResetClientState();
+        }
+
         try
         {
             string hostIP;
@@ -192,6 +211,34 @@ public class NetworkManager : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError("Error connecting: " + e.Message);
+        }
+    }
+
+    private void ResetClientState()
+    {
+        // Stop existing network threads and cleanup
+        running = false;
+        
+        if (receiveThread != null && receiveThread.IsAlive)
+        {
+            receiveThread.Join(500);
+        }
+        
+        if (udpClient != null)
+        {
+            try { udpClient.Close(); } catch { }
+            udpClient = null;
+        }
+        
+        // Reset connection state
+        isConnected = false;
+        pendingPlayerId = null;
+        hostEndPoint = null;
+        
+        // Notify PlayerManager to clean up
+        if (playerManager != null)
+        {
+            playerManager.ResetState();
         }
     }
 
@@ -295,6 +342,15 @@ public class NetworkManager : MonoBehaviour
             case MessageType.Replication:
                 if (!isHost) HandleReplicationPackets(data);
                 break;
+            case MessageType.Heartbeat:
+                if (!isHost) HandleHeartbeatFromHost();
+                break;
+            case MessageType.HeartbeatAck:
+                if (isHost) HandleHeartbeatAck(sender);
+                break;
+            case MessageType.PlayerSpawned:
+                if (!isHost) HandlePlayerSpawned(data);
+                break;
         }
     }
 
@@ -306,6 +362,7 @@ public class NetworkManager : MonoBehaviour
         {
             connectedClients[clientId] = client;
             clientIdToEndpoint[clientId] = client;
+            clientLastHeartbeat[clientId] = Time.time;
 
             ExecuteOnMainThread(() =>
             {
@@ -410,6 +467,38 @@ public class NetworkManager : MonoBehaviour
                 playerManager.SpawnExistingPlayers(playersData);
             }
         });
+    }
+
+    void HandlePlayerSpawned(byte[] data)
+    {
+        ExistingPlayerData playerData = NetworkProtocolBinary.DeserializePlayerSpawned(data);
+
+        ExecuteOnMainThread(() =>
+        {
+            if (playerManager != null)
+            {
+                playerManager.SpawnNetworkedPlayer(playerData);
+            }
+        });
+    }
+
+    public void BroadcastNewPlayerToOtherClients(string exceptClientId, ExistingPlayerData playerData)
+    {
+        byte[] data = NetworkProtocolBinary.SerializePlayerSpawned(playerData);
+        
+        foreach (var kvp in connectedClients)
+        {
+            if (kvp.Key == exceptClientId) continue;
+            
+            try
+            {
+                udpClient.Send(data, data.Length, kvp.Value);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("Error broadcasting new player: " + e.Message);
+            }
+        }
     }
 
     void HandleSyncExistingBalls(byte[] data)
@@ -601,6 +690,61 @@ public class NetworkManager : MonoBehaviour
         if (!isConnected || !isHost) return;
         SendToAllClients(data);
     }
+
+    #region Heartbeat System
+
+    void SendHeartbeatToClients()
+    {
+        byte[] data = new byte[] { (byte)MessageType.Heartbeat };
+        SendToAllClients(data);
+    }
+
+    void CheckClientTimeouts()
+    {
+        List<string> timedOutClients = new List<string>();
+        
+        foreach (var kvp in clientLastHeartbeat)
+        {
+            if (Time.time - kvp.Value > CLIENT_TIMEOUT)
+            {
+                timedOutClients.Add(kvp.Key);
+            }
+        }
+
+        foreach (string clientId in timedOutClients)
+        {
+            Debug.LogWarning($"Client {clientId} timed out - removing from connected clients");
+            connectedClients.Remove(clientId);
+            clientIdToEndpoint.Remove(clientId);
+            clientLastHeartbeat.Remove(clientId);
+            
+            ExecuteOnMainThread(() =>
+            {
+                if (playerManager != null)
+                {
+                    playerManager.HandleClientDisconnected(clientId);
+                }
+            });
+        }
+    }
+
+    void HandleHeartbeatFromHost()
+    {
+        // Client responds to host heartbeat
+        byte[] data = new byte[] { (byte)MessageType.HeartbeatAck };
+        SendToHost(data);
+    }
+
+    void HandleHeartbeatAck(IPEndPoint sender)
+    {
+        string clientId = sender.ToString();
+        if (clientLastHeartbeat.ContainsKey(clientId))
+        {
+            clientLastHeartbeat[clientId] = Time.time;
+        }
+    }
+
+    #endregion
 
     public void SendMyPlayerTransform(string playerId, Vector3 pos, Quaternion rot)
     {

@@ -25,7 +25,6 @@ public class ReplicationPacket
     public Vector3 position;
     public Quaternion rotation;
     public Vector3 velocity;
-    public byte[] extraData;
 }
 
 public class ReplicationManagerServer : MonoBehaviour
@@ -35,8 +34,6 @@ public class ReplicationManagerServer : MonoBehaviour
 
     private NetworkManager networkManager;
     private NetworkObjectManager networkObjectManager;
-    private BallManager ballManager;
-    private PlayerManager playerManager;
 
     private Dictionary<string, ReplicatedObjectType> registeredObjects = new Dictionary<string, ReplicatedObjectType>();
     private List<ReplicationPacket> pendingPackets = new List<ReplicationPacket>();
@@ -46,8 +43,6 @@ public class ReplicationManagerServer : MonoBehaviour
     {
         networkManager = FindFirstObjectByType<NetworkManager>();
         networkObjectManager = FindFirstObjectByType<NetworkObjectManager>();
-        ballManager = FindFirstObjectByType<BallManager>();
-        playerManager = FindFirstObjectByType<PlayerManager>();
     }
 
     void Start()

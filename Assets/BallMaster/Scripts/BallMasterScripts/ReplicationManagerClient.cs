@@ -5,8 +5,6 @@ public class ReplicationManagerClient : MonoBehaviour
 {
     private NetworkManager networkManager;
     private NetworkObjectManager networkObjectManager;
-    private BallManager ballManager;
-    private PlayerManager playerManager;
 
     private Dictionary<string, GameObject> replicatedObjects = new Dictionary<string, GameObject>();
 
@@ -14,8 +12,6 @@ public class ReplicationManagerClient : MonoBehaviour
     {
         networkManager = FindFirstObjectByType<NetworkManager>();
         networkObjectManager = FindFirstObjectByType<NetworkObjectManager>();
-        ballManager = FindFirstObjectByType<BallManager>();
-        playerManager = FindFirstObjectByType<PlayerManager>();
     }
 
     void Start()
