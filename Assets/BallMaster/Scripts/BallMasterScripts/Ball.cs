@@ -103,6 +103,51 @@ public class Ball : MonoBehaviour
         lastLauncherCollider = null;
     }
 
+    public void Drop(Vector3 direction, string droppperId, Vector3? dropPosition = null)
+    {
+        currentState = BallState.Cold;
+        ownerPlayerId = "";
+        bounceCount = 0;
+        velocity = direction.normalized * (hotSpeed * 0.5f);
+
+        velocity = direction;
+
+        lastLaunchTime = Time.time;
+
+        isEquipped = false;
+        equipTransform = null;
+        equippedPlayerId = "";
+
+        transform.SetParent(null);
+
+        if (dropPosition.HasValue)
+        {
+            transform.position = dropPosition.Value;
+        }
+
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
+        rb.useGravity = true; // Drop uses gravity immediately
+        rb.isKinematic = false;
+        rb.linearVelocity = velocity;
+
+        GetComponent<Collider>().enabled = true;
+
+        if (networkObjectManager != null)
+        {
+            NetworkObject droppper = networkObjectManager.GetNetworkObject(droppperId);
+            if (droppper != null)
+            {
+                Collider dropperCollider = droppper.GetComponent<Collider>();
+                if (dropperCollider != null)
+                {
+                    lastLauncherCollider = dropperCollider;
+                    Physics.IgnoreCollision(GetComponent<Collider>(), dropperCollider, true);
+                    StartCoroutine(RestoreCollisionAfterDelay(dropperCollider, pickupCooldown));
+                }
+            }
+        }
+    }
+
     public void Equip(Transform parent, string playerId = "")
     {
         equippedPlayerId = playerId;

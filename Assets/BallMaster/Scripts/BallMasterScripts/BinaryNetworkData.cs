@@ -15,6 +15,7 @@ public enum MessageType : byte
     Replication,
     Heartbeat,
     HeartbeatAck,
+    BallDrop,
 }
 
 public class BallLaunchData
@@ -157,6 +158,20 @@ public static class NetworkProtocolBinary
     {
         return Serialize(
             MessageType.BallLaunched,
+            (writer) =>
+            {
+                writer.Write(launchData.ballId);
+                WriteVector3(writer, launchData.direction);
+                writer.Write(launchData.launcherId);
+                WriteVector3(writer, launchData.launchPosition);
+            }
+        );
+    }
+
+    public static byte[] SerializeBallDrop(BallLaunchData launchData)
+    {
+        return Serialize(
+            MessageType.BallDrop,
             (writer) =>
             {
                 writer.Write(launchData.ballId);

@@ -97,6 +97,15 @@ public class PlayerInput : MonoBehaviour
         )
         {
             playerController.TryThrow();
+            playerController.TryThrow();
+        }
+
+        if (
+            (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame)
+            || (Gamepad.current != null && Gamepad.current.buttonEast.wasPressedThisFrame) // B/Circle usually
+        )
+        {
+            playerController.TryDrop();
         }
 
         bool isSprinting =

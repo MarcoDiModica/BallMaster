@@ -332,6 +332,12 @@ public class NetworkManager : MonoBehaviour
                 if (isHost)
                     HandleHeartbeatAck(sender);
                 break;
+            case MessageType.BallDrop:
+                if (isHost)
+                    HandleBallDropFromClient(data, sender);
+                else
+                    HandleBallDropUpdate(data);
+                break;
         }
     }
 
@@ -489,6 +495,83 @@ public class NetworkManager : MonoBehaviour
         {
             SendToHost(data);
         }
+    }
+
+    public void SendBallDrop(
+        string ballId,
+        Vector3 direction,
+        string launcherId,
+        Vector3 launchPosition
+    )
+    {
+        if (!isConnected)
+            return;
+
+        BallLaunchData launchData = new BallLaunchData
+        {
+            ballId = ballId,
+            direction = direction,
+            launcherId = launcherId,
+            launchPosition = launchPosition,
+        };
+
+        byte[] data = NetworkProtocolBinary.SerializeBallDrop(launchData);
+
+        if (isHost)
+        {
+            SendToAllClients(data);
+        }
+        else
+        {
+            SendToHost(data);
+        }
+    }
+
+    void HandleBallDropFromClient(byte[] data, IPEndPoint sender)
+    {
+        BallLaunchData launchData = NetworkProtocolBinary.DeserializeBallLaunch(data);
+
+        ExecuteOnMainThread(() =>
+        {
+            if (ballManager != null)
+            {
+                Ball ball = ballManager.GetBall(launchData.ballId);
+                if (ball != null)
+                {
+                    ball.Drop(
+                        launchData.direction,
+                        launchData.launcherId,
+                        launchData.launchPosition
+                    );
+                    NetworkObject netObj = ball.GetComponent<NetworkObject>();
+                    if (netObj)
+                        netObj.MarkDirty();
+                }
+            }
+        });
+
+        SendToAllClientsExcept(data, sender);
+    }
+
+    void HandleBallDropUpdate(byte[] data)
+    {
+        BallLaunchData launchData = NetworkProtocolBinary.DeserializeBallLaunch(data);
+
+        ExecuteOnMainThread(() =>
+        {
+            if (ballManager != null)
+            {
+                Ball ball = ballManager.GetBall(launchData.ballId);
+                if (ball != null)
+                {
+                    ball.Drop(
+                        launchData.direction,
+                        launchData.launcherId,
+                        launchData.launchPosition
+                    );
+                }
+            }
+        });
     }
 
     public void SendBallEquip(string ballId, string playerId)

@@ -217,6 +217,13 @@ public class PlayerController : MonoBehaviour
         ThrowBall();
     }
 
+    public void TryDrop()
+    {
+        if (isPaused || equippedBall == null)
+            return;
+        DropBall();
+    }
+
     void Update()
     {
         if (isPaused)
@@ -480,8 +487,32 @@ public class PlayerController : MonoBehaviour
         if (equippedBall == null)
             return;
 
-        Vector3 shootDirection =
-            cameraTransform != null ? cameraTransform.forward : transform.forward;
+        // Aim Precision: Raycast from camera center
+        Vector3 shootDirection = transform.forward;
+        if (playerCamera != null)
+        {
+            Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+            RaycastHit hit;
+            Vector3 targetPoint;
+
+            // Use a mask if needed, for now hit everything except player (layer check?)
+            // Assuming player is on a layer or we use ignore helper.
+            // Simplified: Raycast against everything.
+            if (Physics.Raycast(ray, out hit, 100f))
+            {
+                targetPoint = hit.point;
+            }
+            else
+            {
+                targetPoint = ray.GetPoint(50f);
+            }
+
+            shootDirection = (targetPoint - equippedBall.transform.position).normalized;
+        }
+        else if (cameraTransform != null)
+        {
+            shootDirection = cameraTransform.forward;
+        }
 
         string myId = GetComponent<NetworkObject>()?.objectId ?? "local";
         string ballId = equippedBall.GetComponent<NetworkObject>()?.objectId;
@@ -498,6 +529,35 @@ public class PlayerController : MonoBehaviour
         )
         {
             playerManager.NetworkManager.SendBallLaunch(ballId, shootDirection, myId, launchPos);
+        }
+
+        equippedBall = null;
+    }
+
+    void DropBall()
+    {
+        if (equippedBall == null)
+            return;
+
+        // Gentle forward toss
+        Vector3 dropDirection = (transform.forward + Vector3.up * 0.2f).normalized * 5f;
+        // 5f is gentle speed
+
+        string myId = GetComponent<NetworkObject>()?.objectId ?? "local";
+        string ballId = equippedBall.GetComponent<NetworkObject>()?.objectId;
+        Vector3 launchPos = equippedBall.transform.position;
+
+        equippedBall.Unequip();
+
+        equippedBall.Drop(dropDirection, myId);
+
+        if (
+            playerManager != null
+            && playerManager.NetworkManager != null
+            && !string.IsNullOrEmpty(ballId)
+        )
+        {
+            playerManager.NetworkManager.SendBallDrop(ballId, dropDirection, myId, launchPos);
         }
 
         equippedBall = null;
