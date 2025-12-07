@@ -16,7 +16,8 @@ public enum MessageType : byte
     BallState,
     SyncExistingBalls,
     BallLaunched,
-    BallEquip
+    BallEquip,
+    Replication
 }
 
 public class PlayerTransformData
@@ -407,5 +408,48 @@ public static class NetworkProtocolBinary
             }
         }
         return ballStates;
+    }
+
+    public static byte[] SerializeReplicationPackets(List<ReplicationPacket> packets)
+    {
+        return Serialize(MessageType.Replication, (writer) =>
+        {
+            writer.Write(packets.Count);
+
+            foreach (var packet in packets)
+            {
+                writer.Write((byte)packet.command);
+                writer.Write(packet.networkId);
+                writer.Write((byte)packet.objectType);
+                WriteVector3(writer, packet.position);
+                WriteQuaternion(writer, packet.rotation);
+                WriteVector3(writer, packet.velocity);
+            }
+        });
+    }
+
+    public static List<ReplicationPacket> DeserializeReplicationPackets(byte[] data)
+    {
+        List<ReplicationPacket> packets = new List<ReplicationPacket>();
+        using (MemoryStream stream = new MemoryStream(data))
+        using (BinaryReader reader = new BinaryReader(stream))
+        {
+            reader.ReadByte();
+            int packetCount = reader.ReadInt32();
+
+            for (int i = 0; i < packetCount; i++)
+            {
+                packets.Add(new ReplicationPacket
+                {
+                    command = (ReplicationCommand)reader.ReadByte(),
+                    networkId = reader.ReadString(),
+                    objectType = (ReplicatedObjectType)reader.ReadByte(),
+                    position = ReadVector3(reader),
+                    rotation = ReadQuaternion(reader),
+                    velocity = ReadVector3(reader)
+                });
+            }
+        }
+        return packets;
     }
 }

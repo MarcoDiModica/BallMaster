@@ -10,6 +10,8 @@ public class NetworkManager : MonoBehaviour
     private PlayerManager playerManager;
     private BallManager ballManager;
     private NetworkObjectManager networkObjectManager;
+    private ReplicationManagerServer replicationServer;
+    private ReplicationManagerClient replicationClient;
 
     [Header("Config")]
     public int port = 4567;
@@ -42,6 +44,8 @@ public class NetworkManager : MonoBehaviour
     public void RegisterPlayerManager(PlayerManager pm) { playerManager = pm; }
     public void RegisterBallManager(BallManager bm) { ballManager = bm; }
     public void RegisterNetworkObjectManager(NetworkObjectManager nom) { networkObjectManager = nom; }
+    public void RegisterReplicationServer(ReplicationManagerServer rs) { replicationServer = rs; }
+    public void RegisterReplicationClient(ReplicationManagerClient rc) { replicationClient = rc; }
 
     private readonly Queue<Action> mainThreadActions = new Queue<Action>();
 
@@ -134,7 +138,7 @@ public class NetworkManager : MonoBehaviour
             }
             catch (Exception e)
             {
-                Debug.LogError("Error enviando: " + e.Message);
+                Debug.LogError("Error sending: " + e.Message);
             }
         }
     }
@@ -151,7 +155,7 @@ public class NetworkManager : MonoBehaviour
             }
             catch (Exception e)
             {
-                Debug.LogError("Error enviando: " + e.Message);
+                Debug.LogError("Error sending: " + e.Message);
             }
         }
     }
@@ -187,7 +191,7 @@ public class NetworkManager : MonoBehaviour
         }
         catch (Exception e)
         {
-            Debug.LogError("Error conectando: " + e.Message);
+            Debug.LogError("Error connecting: " + e.Message);
         }
     }
 
@@ -241,7 +245,7 @@ public class NetworkManager : MonoBehaviour
             catch (SocketException) { break; }
             catch (Exception e)
             {
-                Debug.LogError("Error recibiendo: " + e.Message);
+                Debug.LogError("Error receiving: " + e.Message);
             }
         }
     }
@@ -287,6 +291,9 @@ public class NetworkManager : MonoBehaviour
                     HandleBallEquipFromClient(data, sender);
                 else
                     HandleBallEquipUpdate(data);
+                break;
+            case MessageType.Replication:
+                if (!isHost) HandleReplicationPackets(data);
                 break;
         }
     }
@@ -576,6 +583,23 @@ public class NetworkManager : MonoBehaviour
                 ballManager.EquipBallNetworked(equipData.ballId, equipData.playerId);
             }
         });
+    }
+
+    void HandleReplicationPackets(byte[] data)
+    {
+        ExecuteOnMainThread(() =>
+        {
+            if (replicationClient != null)
+            {
+                replicationClient.ProcessReplicationPackets(data);
+            }
+        });
+    }
+
+    public void SendReplicationData(byte[] data)
+    {
+        if (!isConnected || !isHost) return;
+        SendToAllClients(data);
     }
 
     public void SendMyPlayerTransform(string playerId, Vector3 pos, Quaternion rot)
