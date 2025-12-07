@@ -23,6 +23,11 @@ public class PlayerController : MonoBehaviour
     public float dashForce = 20f;
     public float dashDuration = 0.2f;
     public float airDashCooldown = 1f;
+    public float lowJumpMultiplier = 2.5f;
+
+    [Header("Momentum Settings")]
+    public float slideJumpBoost = 15f;
+    public float momentumDrag = 10f;
 
     [Header("Ground Detection")]
     public float groundCheckDistance = 0.2f;
@@ -35,9 +40,14 @@ public class PlayerController : MonoBehaviour
     public float bobFrequency = 10f;
     public float bobAmplitude = 0.1f;
     public float slideCameraDrop = 0.5f;
+    public float baseFov = 60f;
+    public float sprintFov = 75f;
+    public float dashFov = 85f;
+    public float fovSpeed = 5f;
 
     [Header("References")]
     public Transform cameraTransform;
+    private Camera playerCamera;
     public Transform ballEquipTransform;
 
     private CharacterController controller;
@@ -91,7 +101,12 @@ public class PlayerController : MonoBehaviour
     void Start()
     {
         if (cameraTransform != null)
+        {
             defaultYPos = cameraTransform.localPosition.y;
+            playerCamera = cameraTransform.GetComponent<Camera>();
+            if (playerCamera != null)
+                baseFov = playerCamera.fieldOfView;
+        }
     }
 
     public void SetPaused(bool paused)
@@ -216,7 +231,21 @@ public class PlayerController : MonoBehaviour
             isJumping = false;
         }
 
-        //dash
+        if (HandleDash())
+            return;
+
+        HandleGravity(isGrounded);
+        HandleJumping(isGrounded);
+        HandleMovementPhysics(isGrounded);
+
+        controller.Move(velocity * Time.deltaTime);
+
+        Vector3 horzVel = new Vector3(velocity.x, 0, velocity.z);
+        HandleCameraJuice(currentInput.x, horzVel.magnitude);
+    }
+
+    private bool HandleDash()
+    {
         if (isDashing)
         {
             controller.Move(velocity * Time.deltaTime);
@@ -228,15 +257,21 @@ public class PlayerController : MonoBehaviour
                 velocity.x *= 0.5f;
                 velocity.z *= 0.5f;
             }
-            return;
+            return true;
         }
+        return false;
+    }
 
-        //vertical
+    private void HandleGravity(bool isGrounded)
+    {
         if (isGrounded && velocity.y < 0)
         {
             velocity.y = -2f;
         }
+    }
 
+    private void HandleJumping(bool isGrounded)
+    {
         bool canJump = isGrounded || ((Time.time - lastGroundedTime) <= coyoteTime);
         bool jumpRequested = (Time.time - lastJumpPressedTime) <= jumpBufferTime;
 
@@ -247,19 +282,25 @@ public class PlayerController : MonoBehaviour
             lastJumpPressedTime = -1f;
             lastGroundedTime = -1f;
 
-            //slide jump funciona como la ******
             if (isSliding)
             {
-                float boost = forwardBoost;
-                velocity.x += slideDirection.x * boost;
-                velocity.z += slideDirection.z * boost;
+                Vector3 boostVel = slideDirection * slideJumpBoost;
+                velocity.x = boostVel.x;
+                velocity.z = boostVel.z;
                 StopSlide();
             }
         }
 
-        velocity.y += gravity * Time.deltaTime;
+        if (isJumping && velocity.y > 0 && !isJumpHeld)
+        {
+            velocity.y += gravity * (lowJumpMultiplier - 1) * Time.deltaTime;
+        }
 
-        //momentum
+        velocity.y += gravity * Time.deltaTime;
+    }
+
+    private void HandleMovementPhysics(bool isGrounded)
+    {
         if (isSliding)
         {
             float slideFriction = 2f;
@@ -278,28 +319,51 @@ public class PlayerController : MonoBehaviour
 
             Vector3 targetDir =
                 transform.right * currentInput.x + transform.forward * currentInput.y;
-            Vector3 targetVel = targetDir * targetSpeed;
 
+            if (targetDir.sqrMagnitude > 1f)
+                targetDir.Normalize();
+
+            Vector3 targetVel = targetDir * targetSpeed;
             Vector3 currentHorzVel = new Vector3(velocity.x, 0, velocity.z);
 
-            float accelRate = (currentInput.magnitude > 0.01f) ? acceleration : deceleration;
-            if (!isGrounded)
-                accelRate *= airControl;
+            float currentSpeed = currentHorzVel.magnitude;
 
-            currentHorzVel = Vector3.MoveTowards(
-                currentHorzVel,
-                targetVel,
-                accelRate * Time.deltaTime
-            );
+            if (currentSpeed > targetSpeed && targetSpeed > 0.1f)
+            {
+                float speedDrop = momentumDrag * Time.deltaTime;
+                float newSpeed = Mathf.Max(targetSpeed, currentSpeed - speedDrop);
+
+                if (currentInput.magnitude > 0.01f)
+                {
+                    Vector3 blendedDir = Vector3.RotateTowards(
+                        currentHorzVel.normalized,
+                        targetDir.normalized,
+                        10f * Time.deltaTime,
+                        0f
+                    );
+                    currentHorzVel = blendedDir * newSpeed;
+                }
+                else
+                {
+                    currentHorzVel = currentHorzVel.normalized * newSpeed;
+                }
+            }
+            else
+            {
+                float accelRate = (currentInput.magnitude > 0.01f) ? acceleration : deceleration;
+                if (!isGrounded)
+                    accelRate *= airControl;
+
+                currentHorzVel = Vector3.MoveTowards(
+                    currentHorzVel,
+                    targetVel,
+                    accelRate * Time.deltaTime
+                );
+            }
 
             velocity.x = currentHorzVel.x;
             velocity.z = currentHorzVel.z;
         }
-
-        controller.Move(velocity * Time.deltaTime);
-
-        Vector3 horzVel = new Vector3(velocity.x, 0, velocity.z);
-        HandleCameraJuice(currentInput.x, horzVel.magnitude);
     }
 
     void HandleCameraJuice(float inputX, float speedParam)
@@ -307,7 +371,6 @@ public class PlayerController : MonoBehaviour
         if (cameraTransform == null)
             return;
 
-        //tilt
         float targetTilt = -inputX * tiltAngle;
         Quaternion currentRot = cameraTransform.localRotation;
         float newZ = Mathf.LerpAngle(
@@ -318,7 +381,6 @@ public class PlayerController : MonoBehaviour
 
         cameraTransform.localRotation = Quaternion.Euler(xRotation, 0f, newZ);
 
-        //headbob & slide height
         float targetY = defaultYPos;
 
         if (isSliding)
@@ -338,6 +400,30 @@ public class PlayerController : MonoBehaviour
         Vector3 camPos = cameraTransform.localPosition;
         camPos.y = Mathf.Lerp(camPos.y, targetY, Time.deltaTime * 10f);
         cameraTransform.localPosition = camPos;
+
+        if (playerCamera != null)
+        {
+            float targetFov = baseFov;
+            if (isDashing)
+                targetFov = dashFov;
+            else if (isSprinting && speedParam > walkSpeed + 1f)
+                targetFov = sprintFov;
+            else if (isSliding)
+                targetFov = sprintFov;
+
+            playerCamera.fieldOfView = Mathf.Lerp(
+                playerCamera.fieldOfView,
+                targetFov,
+                Time.deltaTime * fovSpeed
+            );
+        }
+    }
+
+    private bool isJumpHeld = false;
+
+    public void SetJumpHeld(bool held)
+    {
+        isJumpHeld = held;
     }
 
     void OnTriggerEnter(Collider other)

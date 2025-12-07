@@ -78,6 +78,12 @@ public class PlayerNetworkComponent : MonoBehaviour
         }
         else
         {
+            // Hide own meshes but keep shadows
+            foreach (var renderer in GetComponentsInChildren<Renderer>())
+            {
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
+            }
+
             if (playerController != null)
             {
                 playerController.enabled = true;

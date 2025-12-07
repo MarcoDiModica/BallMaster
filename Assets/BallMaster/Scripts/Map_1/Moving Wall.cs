@@ -1,21 +1,22 @@
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
 
 [RequireComponent(typeof(NetworkObject))]
 public class MovingWall : MonoBehaviour
 {
     public float tiempoEspera = 30f;
-    public float distanciaBajada = 2f; 
-    public float duracionBajada = 2f; 
-    public float tiempoEsperaSubida = 60f; 
-    public float duracionSubida = 2f; 
+    public float distanciaBajada = 2f;
+    public float duracionBajada = 2f;
+    public float tiempoEsperaSubida = 60f;
+    public float duracionSubida = 2f;
 
     private Vector3 posicionInicial;
     private NetworkObject networkObject;
     private NetworkObjectManager networkObjectManager;
     private bool isHost = false;
 
-    [SerializeField] private NetworkManager networkManager;
+    [SerializeField]
+    private NetworkManager networkManager;
 
     void Start()
     {
@@ -34,14 +35,23 @@ public class MovingWall : MonoBehaviour
         {
             networkObject.objectId = "MovingWall_" + gameObject.name;
         }
-        
+
         if (networkObjectManager != null)
         {
             networkObjectManager.RegisterNetworkObject(networkObject);
         }
 
+        // Fix: Explicitly register with ReplicationServer if we are Host
         if (isHost)
         {
+            var replicationServer = FindFirstObjectByType<ReplicationManagerServer>();
+            if (replicationServer != null)
+            {
+                replicationServer.RegisterObject(
+                    networkObject.objectId,
+                    ReplicatedObjectType.NetworkObject
+                );
+            }
             StartCoroutine(BajarDespuesDeTiempoCoroutine());
         }
         else
@@ -55,6 +65,16 @@ public class MovingWall : MonoBehaviour
         if (networkObject != null)
         {
             networkObject.OnStateUpdated -= OnNetworkStateUpdated;
+        }
+
+        // Cleanup registration if needed (optional but good practice)
+        if (isHost)
+        {
+            var replicationServer = FindFirstObjectByType<ReplicationManagerServer>();
+            if (replicationServer != null)
+            {
+                replicationServer.UnregisterObject(networkObject.objectId);
+            }
         }
     }
 
@@ -75,7 +95,11 @@ public class MovingWall : MonoBehaviour
 
             while (tiempoTranscurrido < duracionBajada)
             {
-                transform.position = Vector3.Lerp(posicionInicial, posicionFinal, tiempoTranscurrido / duracionBajada);
+                transform.position = Vector3.Lerp(
+                    posicionInicial,
+                    posicionFinal,
+                    tiempoTranscurrido / duracionBajada
+                );
                 networkObject.isDirty = true;
                 tiempoTranscurrido += Time.deltaTime;
                 yield return null;
@@ -89,7 +113,11 @@ public class MovingWall : MonoBehaviour
             tiempoTranscurrido = 0f;
             while (tiempoTranscurrido < duracionSubida)
             {
-                transform.position = Vector3.Lerp(posicionFinal, posicionInicial, tiempoTranscurrido / duracionSubida);
+                transform.position = Vector3.Lerp(
+                    posicionFinal,
+                    posicionInicial,
+                    tiempoTranscurrido / duracionSubida
+                );
                 networkObject.isDirty = true;
                 tiempoTranscurrido += Time.deltaTime;
                 yield return null;
