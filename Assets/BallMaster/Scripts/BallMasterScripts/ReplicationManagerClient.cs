@@ -58,14 +58,17 @@ public class ReplicationManagerClient : MonoBehaviour
             return;
 
         NetworkObject existingNetObj = networkObjectManager?.GetNetworkObject(packet.networkId);
-        
+
         if (existingNetObj != null)
         {
             replicatedObjects[packet.networkId] = existingNetObj.gameObject;
             existingNetObj.UpdateState(packet.position, packet.rotation);
-            Debug.Log($"[Client] Linked existing {packet.objectType} ({packet.networkId})");
-            
-            RegisterWithSpecificManager(existingNetObj.gameObject, packet.objectType, packet.networkId);
+
+            RegisterWithSpecificManager(
+                existingNetObj.gameObject,
+                packet.objectType,
+                packet.networkId
+            );
             return;
         }
 
@@ -85,36 +88,40 @@ public class ReplicationManagerClient : MonoBehaviour
         if (prefabToSpawn != null)
         {
             GameObject newObj = Instantiate(prefabToSpawn, packet.position, packet.rotation);
-            
+
             NetworkObject netObj = newObj.GetComponent<NetworkObject>();
-            if (netObj == null) netObj = newObj.AddComponent<NetworkObject>();
-            
+            if (netObj == null)
+                netObj = newObj.AddComponent<NetworkObject>();
+
             netObj.objectId = packet.networkId;
-            
+
             if (networkObjectManager != null)
             {
                 networkObjectManager.RegisterNetworkObject(netObj);
             }
-            
+
             replicatedObjects[packet.networkId] = newObj;
-            
+
             if (packet.objectType == ReplicatedObjectType.Player)
             {
                 PlayerNetworkComponent pnc = newObj.GetComponent<PlayerNetworkComponent>();
                 if (pnc != null)
                 {
-                    bool isMine = playerManager != null && playerManager.IsMyPlayer(packet.networkId);
+                    bool isMine =
+                        playerManager != null && playerManager.IsMyPlayer(packet.networkId);
                     pnc.Initialize(isMine);
                 }
             }
-            
-            RegisterWithSpecificManager(newObj, packet.objectType, packet.networkId);
 
-            Debug.Log($"[Client] Created {packet.objectType} ({packet.networkId})");
+            RegisterWithSpecificManager(newObj, packet.objectType, packet.networkId);
         }
     }
 
-    private void RegisterWithSpecificManager(GameObject obj, ReplicatedObjectType type, string netId)
+    private void RegisterWithSpecificManager(
+        GameObject obj,
+        ReplicatedObjectType type,
+        string netId
+    )
     {
         if (type == ReplicatedObjectType.Ball && ballManager != null)
         {
@@ -133,17 +140,11 @@ public class ReplicationManagerClient : MonoBehaviour
     private void HandleUpdate(ReplicationPacket packet)
     {
         NetworkObject netObj = networkObjectManager?.GetNetworkObject(packet.networkId);
-        
+
         if (netObj != null)
         {
-            netObj.UpdateState(packet.position, packet.rotation);
-            
-            Rigidbody rb = netObj.GetComponent<Rigidbody>();
-            if (rb != null && packet.velocity != Vector3.zero)
-            {
-                rb.linearVelocity = packet.velocity;
-            }
-            
+            netObj.AddSnapshot(packet.timestamp, packet.position, packet.rotation, packet.velocity);
+
             if (!replicatedObjects.ContainsKey(packet.networkId))
             {
                 replicatedObjects[packet.networkId] = netObj.gameObject;
@@ -157,11 +158,11 @@ public class ReplicationManagerClient : MonoBehaviour
         {
             GameObject obj = replicatedObjects[packet.networkId];
             replicatedObjects.Remove(packet.networkId);
-            
+
             if (obj != null)
             {
                 networkObjectManager?.UnregisterNetworkObject(packet.networkId);
-                
+
                 if (packet.objectType == ReplicatedObjectType.Ball && ballManager != null)
                 {
                     if (ballManager.GetAllBalls().ContainsKey(packet.networkId))
@@ -169,7 +170,6 @@ public class ReplicationManagerClient : MonoBehaviour
                 }
 
                 Destroy(obj);
-                Debug.Log($"[Client] Destroyed {packet.networkId}");
             }
         }
     }

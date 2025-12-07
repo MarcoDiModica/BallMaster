@@ -1,7 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
 
@@ -22,18 +22,19 @@ public class NetworkManager : MonoBehaviour
 
     private static Dictionary<string, string> codeToIPMap = new Dictionary<string, string>();
     private Dictionary<string, IPEndPoint> connectedClients = new Dictionary<string, IPEndPoint>();
-    private Dictionary<string, IPEndPoint> clientIdToEndpoint = new Dictionary<string, IPEndPoint>();
+    private Dictionary<string, IPEndPoint> clientIdToEndpoint =
+        new Dictionary<string, IPEndPoint>();
     private UdpClient udpClient;
     private Thread receiveThread;
     private bool running = false;
     private IPEndPoint hostEndPoint;
-    
+
     // Heartbeat system
     private Dictionary<string, float> clientLastHeartbeat = new Dictionary<string, float>();
     private float lastHeartbeatTime;
     private const float HEARTBEAT_INTERVAL = 2f;
     private const float CLIENT_TIMEOUT = 10f;
-    
+
     void Awake()
     {
         var managers = FindObjectsByType<NetworkManager>(FindObjectsSortMode.None);
@@ -42,15 +43,34 @@ public class NetworkManager : MonoBehaviour
             Destroy(gameObject);
             return;
         }
-        
+
         DontDestroyOnLoad(gameObject);
     }
-    
-    public void RegisterPlayerManager(PlayerManager pm) { playerManager = pm; }
-    public void RegisterBallManager(BallManager bm) { ballManager = bm; }
-    public void RegisterNetworkObjectManager(NetworkObjectManager nom) { networkObjectManager = nom; }
-    public void RegisterReplicationServer(ReplicationManagerServer rs) { replicationServer = rs; }
-    public void RegisterReplicationClient(ReplicationManagerClient rc) { replicationClient = rc; }
+
+    public void RegisterPlayerManager(PlayerManager pm)
+    {
+        playerManager = pm;
+    }
+
+    public void RegisterBallManager(BallManager bm)
+    {
+        ballManager = bm;
+    }
+
+    public void RegisterNetworkObjectManager(NetworkObjectManager nom)
+    {
+        networkObjectManager = nom;
+    }
+
+    public void RegisterReplicationServer(ReplicationManagerServer rs)
+    {
+        replicationServer = rs;
+    }
+
+    public void RegisterReplicationClient(ReplicationManagerClient rc)
+    {
+        replicationClient = rc;
+    }
 
     private readonly Queue<Action> mainThreadActions = new Queue<Action>();
 
@@ -82,7 +102,7 @@ public class NetworkManager : MonoBehaviour
             }
         }
     }
-    
+
     #region Host
 
     public void StartHost()
@@ -109,12 +129,12 @@ public class NetworkManager : MonoBehaviour
             }
         }
     }
-    
+
     public void SendToClient(string clientId, byte[] data)
     {
         if (clientIdToEndpoint.ContainsKey(clientId))
         {
-             try
+            try
             {
                 udpClient.Send(data, data.Length, clientIdToEndpoint[clientId]);
             }
@@ -129,8 +149,9 @@ public class NetworkManager : MonoBehaviour
     {
         foreach (var client in connectedClients.Values)
         {
-            if (client.Equals(except)) continue;
-            
+            if (client.Equals(except))
+                continue;
+
             try
             {
                 udpClient.Send(data, data.Length, client);
@@ -172,7 +193,7 @@ public class NetworkManager : MonoBehaviour
 
             hostEndPoint = new IPEndPoint(IPAddress.Parse(hostIP), port);
             StartUDP(0);
-            
+
             currentLobbyCode = code;
             isConnected = true;
         }
@@ -185,22 +206,26 @@ public class NetworkManager : MonoBehaviour
     private void ResetClientState()
     {
         running = false;
-        
+
         if (receiveThread != null && receiveThread.IsAlive)
         {
             receiveThread.Join(500);
         }
-        
+
         if (udpClient != null)
         {
-            try { udpClient.Close(); } catch { }
+            try
+            {
+                udpClient.Close();
+            }
+            catch { }
             udpClient = null;
         }
-        
+
         isConnected = false;
         pendingPlayerId = null;
         hostEndPoint = null;
-        
+
         if (playerManager != null)
         {
             playerManager.ResetState();
@@ -254,7 +279,10 @@ public class NetworkManager : MonoBehaviour
                 byte[] data = udpClient.Receive(ref remoteEP);
                 ProcessMessage(data, remoteEP);
             }
-            catch (SocketException) { break; }
+            catch (SocketException)
+            {
+                break;
+            }
             catch (Exception e)
             {
                 Debug.LogError("Error receiving: " + e.Message);
@@ -269,14 +297,16 @@ public class NetworkManager : MonoBehaviour
         switch (type)
         {
             case MessageType.Join:
-                if (isHost) HandleClientJoin(sender, data);
+                if (isHost)
+                    HandleClientJoin(sender, data);
                 break;
             case MessageType.PlayerTransform:
-                if (isHost) 
+                if (isHost)
                     HandlePlayerTransformFromClient(data, sender);
                 break;
             case MessageType.AssignPlayerId:
-                if (!isHost) HandleAssignPlayerId(data);
+                if (!isHost)
+                    HandleAssignPlayerId(data);
                 break;
             case MessageType.BallLaunched:
                 if (isHost)
@@ -291,13 +321,16 @@ public class NetworkManager : MonoBehaviour
                     HandleBallEquipUpdate(data);
                 break;
             case MessageType.Replication:
-                if (!isHost) HandleReplicationPackets(data);
+                if (!isHost)
+                    HandleReplicationPackets(data);
                 break;
             case MessageType.Heartbeat:
-                if (!isHost) HandleHeartbeatFromHost();
+                if (!isHost)
+                    HandleHeartbeatFromHost();
                 break;
             case MessageType.HeartbeatAck:
-                if (isHost) HandleHeartbeatAck(sender);
+                if (isHost)
+                    HandleHeartbeatAck(sender);
                 break;
         }
     }
@@ -310,15 +343,16 @@ public class NetworkManager : MonoBehaviour
         {
             connectedClients[clientId] = client;
             clientIdToEndpoint[clientId] = client;
-            clientLastHeartbeat[clientId] = Time.time;
 
             ExecuteOnMainThread(() =>
             {
+                clientLastHeartbeat[clientId] = Time.time;
+
                 if (playerManager != null)
                 {
                     playerManager.HandleClientJoined(clientId);
                 }
-                
+
                 if (replicationServer != null)
                 {
                     replicationServer.SendInitialStateToClient(clientId);
@@ -344,7 +378,7 @@ public class NetworkManager : MonoBehaviour
             }
         });
     }
-    
+
     private string pendingPlayerId;
 
     public string GetPendingPlayerId()
@@ -380,9 +414,14 @@ public class NetworkManager : MonoBehaviour
                 Ball ball = ballManager.GetBall(launchData.ballId);
                 if (ball != null)
                 {
-                    ball.Launch(launchData.direction, launchData.launcherId, launchData.launchPosition);
+                    ball.Launch(
+                        launchData.direction,
+                        launchData.launcherId,
+                        launchData.launchPosition
+                    );
                     NetworkObject netObj = ball.GetComponent<NetworkObject>();
-                    if(netObj) netObj.MarkDirty();
+                    if (netObj)
+                        netObj.MarkDirty();
                 }
             }
         });
@@ -401,7 +440,11 @@ public class NetworkManager : MonoBehaviour
                 Ball ball = ballManager.GetBall(launchData.ballId);
                 if (ball != null)
                 {
-                    ball.Launch(launchData.direction, launchData.launcherId, launchData.launchPosition);
+                    ball.Launch(
+                        launchData.direction,
+                        launchData.launcherId,
+                        launchData.launchPosition
+                    );
                 }
             }
         });
@@ -418,16 +461,22 @@ public class NetworkManager : MonoBehaviour
 
     #endregion
 
-    public void SendBallLaunch(string ballId, Vector3 direction, string launcherId, Vector3 launchPosition)
+    public void SendBallLaunch(
+        string ballId,
+        Vector3 direction,
+        string launcherId,
+        Vector3 launchPosition
+    )
     {
-        if (!isConnected) return;
+        if (!isConnected)
+            return;
 
         BallLaunchData launchData = new BallLaunchData
         {
             ballId = ballId,
             direction = direction,
             launcherId = launcherId,
-            launchPosition = launchPosition
+            launchPosition = launchPosition,
         };
 
         byte[] data = NetworkProtocolBinary.SerializeBallLaunch(launchData);
@@ -444,13 +493,10 @@ public class NetworkManager : MonoBehaviour
 
     public void SendBallEquip(string ballId, string playerId)
     {
-        if (!isConnected) return;
+        if (!isConnected)
+            return;
 
-        BallEquipData equipData = new BallEquipData
-        {
-            ballId = ballId,
-            playerId = playerId
-        };
+        BallEquipData equipData = new BallEquipData { ballId = ballId, playerId = playerId };
 
         byte[] data = NetworkProtocolBinary.SerializeBallEquip(equipData);
 
@@ -463,11 +509,11 @@ public class NetworkManager : MonoBehaviour
             SendToHost(data);
         }
     }
-    
+
     void HandleBallEquipFromClient(byte[] data, IPEndPoint sender)
     {
         BallEquipData equipData = NetworkProtocolBinary.DeserializeBallEquip(data);
-        
+
         ExecuteOnMainThread(() =>
         {
             if (ballManager != null)
@@ -475,14 +521,14 @@ public class NetworkManager : MonoBehaviour
                 ballManager.EquipBallNetworked(equipData.ballId, equipData.playerId);
             }
         });
-        
+
         SendToAllClientsExcept(data, sender);
     }
-    
+
     void HandleBallEquipUpdate(byte[] data)
     {
         BallEquipData equipData = NetworkProtocolBinary.DeserializeBallEquip(data);
-        
+
         ExecuteOnMainThread(() =>
         {
             if (ballManager != null)
@@ -505,10 +551,11 @@ public class NetworkManager : MonoBehaviour
 
     public void SendReplicationData(byte[] data)
     {
-        if (!isConnected || !isHost) return;
+        if (!isConnected || !isHost)
+            return;
         SendToAllClients(data);
     }
-    
+
     public void SendReplicationDataToClient(string clientId, byte[] data)
     {
         SendToClient(clientId, data);
@@ -525,7 +572,7 @@ public class NetworkManager : MonoBehaviour
     void CheckClientTimeouts()
     {
         List<string> timedOutClients = new List<string>();
-        
+
         foreach (var kvp in clientLastHeartbeat)
         {
             if (Time.time - kvp.Value > CLIENT_TIMEOUT)
@@ -536,11 +583,10 @@ public class NetworkManager : MonoBehaviour
 
         foreach (string clientId in timedOutClients)
         {
-            Debug.LogWarning($"Client {clientId} timed out - removing from connected clients");
             connectedClients.Remove(clientId);
             clientIdToEndpoint.Remove(clientId);
             clientLastHeartbeat.Remove(clientId);
-            
+
             ExecuteOnMainThread(() =>
             {
                 if (playerManager != null)
@@ -560,29 +606,33 @@ public class NetworkManager : MonoBehaviour
     void HandleHeartbeatAck(IPEndPoint sender)
     {
         string clientId = sender.ToString();
-        if (clientLastHeartbeat.ContainsKey(clientId))
+        ExecuteOnMainThread(() =>
         {
-            clientLastHeartbeat[clientId] = Time.time;
-        }
+            if (clientLastHeartbeat.ContainsKey(clientId))
+            {
+                clientLastHeartbeat[clientId] = Time.time;
+            }
+        });
     }
 
     #endregion
 
     public void SendMyPlayerTransform(string playerId, Vector3 pos, Quaternion rot)
     {
-        if (!isConnected || isHost) return;
+        if (!isConnected || isHost)
+            return;
 
         PlayerTransformData transform = new PlayerTransformData
         {
             playerId = playerId,
             position = pos,
-            rotation = rot
+            rotation = rot,
         };
 
         byte[] data = NetworkProtocolBinary.SerializePlayerTransform(transform);
         SendToHost(data);
     }
-    
+
     public int GetPlayerCount()
     {
         if (isHost)
@@ -626,16 +676,16 @@ public class NetworkManager : MonoBehaviour
 
         string ip = GetLocalIP();
         string ipEncoded = EncodeIPCompact(ip);
-        
+
         return prefix + ipEncoded;
     }
-    
+
     string EncodeIPCompact(string ip)
     {
         string[] parts = ip.Split('.');
-        return parts[parts.Length-1].PadLeft(3, '0'); 
+        return parts[parts.Length - 1].PadLeft(3, '0');
     }
-    
+
     string DecodeIPFromCode(string code)
     {
         string ip = GetLocalIP();

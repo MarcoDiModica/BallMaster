@@ -22,6 +22,7 @@ public class ReplicationPacket
     public ReplicationCommand command;
     public string networkId;
     public ReplicatedObjectType objectType;
+    public float timestamp;
     public Vector3 position;
     public Quaternion rotation;
     public Vector3 velocity;
@@ -30,7 +31,7 @@ public class ReplicationPacket
 public class ReplicationManagerServer : MonoBehaviour
 {
     [Header("Configuration")]
-    public float replicationInterval = 0.033f; //30hz
+    public float replicationInterval = 0.016f;
 
     private NetworkManager networkManager;
     private NetworkObjectManager networkObjectManager;
@@ -40,11 +41,15 @@ public class ReplicationManagerServer : MonoBehaviour
 
     private List<ReplicationPacket> pendingPackets = new List<ReplicationPacket>();
     private float lastReplicationTime;
+    private float serverStartTime;
+
+    public float ServerTime => Time.time - serverStartTime;
 
     void Awake()
     {
         networkManager = FindFirstObjectByType<NetworkManager>();
         networkObjectManager = FindFirstObjectByType<NetworkObjectManager>();
+        serverStartTime = Time.time;
     }
 
     void Start()
@@ -60,20 +65,28 @@ public class ReplicationManagerServer : MonoBehaviour
         if (networkManager == null || !networkManager.isHost || !networkManager.isConnected)
             return;
 
-        if (networkObjectManager != null)
-        {
-            foreach (var netObj in networkObjectManager.GetAllNetworkObjects())
-            {
-                if (netObj.isDirty && registeredObjects.ContainsKey(netObj.objectId))
-                {
-                    MarkDirty(netObj.objectId);
-                    netObj.isDirty = false;
-                }
-            }
-        }
-
         if (Time.time - lastReplicationTime >= replicationInterval)
         {
+            foreach (var kvp in registeredObjects)
+            {
+                string id = kvp.Key;
+                ReplicatedObjectType type = kvp.Value;
+
+                if (type == ReplicatedObjectType.Player)
+                {
+                    QueueCommand(ReplicationCommand.Update, id, type);
+                }
+                else
+                {
+                    NetworkObject netObj = networkObjectManager?.GetNetworkObject(id);
+                    if (netObj != null && netObj.isDirty)
+                    {
+                        QueueCommand(ReplicationCommand.Update, id, type);
+                        netObj.isDirty = false;
+                    }
+                }
+            }
+
             BroadcastReplicationPackets();
             lastReplicationTime = Time.time;
         }
@@ -85,7 +98,6 @@ public class ReplicationManagerServer : MonoBehaviour
         {
             registeredObjects[networkId] = objectType;
             QueueCommand(ReplicationCommand.Create, networkId, objectType);
-            Debug.Log($"[Server] Registered Object {networkId} as {objectType}");
         }
     }
 
@@ -96,7 +108,6 @@ public class ReplicationManagerServer : MonoBehaviour
             ReplicatedObjectType objectType = registeredObjects[networkId];
             registeredObjects.Remove(networkId);
             QueueCommand(ReplicationCommand.Destroy, networkId, objectType);
-            Debug.Log($"[Server] Unregistered Object {networkId}");
         }
     }
 
@@ -126,9 +137,6 @@ public class ReplicationManagerServer : MonoBehaviour
         {
             byte[] data = NetworkProtocolBinary.SerializeReplicationPackets(initialPackets);
             networkManager.SendReplicationDataToClient(clientId, data);
-            Debug.Log(
-                $"[Server] Sent initial state with {initialPackets.Count} objects to {clientId}"
-            );
         }
     }
 
@@ -147,11 +155,11 @@ public class ReplicationManagerServer : MonoBehaviour
 
     private ReplicationPacket CreatePacket(
         ReplicationCommand command,
-        string networkId,
+        string objectId,
         ReplicatedObjectType objectType
     )
     {
-        NetworkObject netObj = networkObjectManager?.GetNetworkObject(networkId);
+        NetworkObject netObj = networkObjectManager?.GetNetworkObject(objectId);
 
         Vector3 pos = Vector3.zero;
         Quaternion rot = Quaternion.identity;
@@ -176,8 +184,9 @@ public class ReplicationManagerServer : MonoBehaviour
         return new ReplicationPacket
         {
             command = command,
-            networkId = networkId,
+            networkId = objectId,
             objectType = objectType,
+            timestamp = ServerTime,
             position = pos,
             rotation = rot,
             velocity = vel,

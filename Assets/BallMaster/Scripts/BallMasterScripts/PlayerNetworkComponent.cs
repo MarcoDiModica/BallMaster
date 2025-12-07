@@ -1,5 +1,5 @@
-using UnityEngine;
 using System;
+using UnityEngine;
 
 public class PlayerNetworkComponent : MonoBehaviour
 {
@@ -11,12 +11,14 @@ public class PlayerNetworkComponent : MonoBehaviour
 
     private Vector3 targetPosition;
     private Quaternion targetRotation;
-    
-    // Cache
+    private float lastSendTime;
+    private const float SEND_INTERVAL = 0.033f;
+
     private NetworkObject networkObject;
     private PlayerController playerController;
     private NetworkManager cachedNetworkManager;
     private PlayerManager playerManager;
+    private bool useSnapshotInterpolation = false;
 
     void Awake()
     {
@@ -24,7 +26,7 @@ public class PlayerNetworkComponent : MonoBehaviour
         playerController = GetComponent<PlayerController>();
         cachedNetworkManager = FindFirstObjectByType<NetworkManager>();
         playerManager = FindFirstObjectByType<PlayerManager>();
-        
+
         targetPosition = transform.position;
         targetRotation = transform.rotation;
     }
@@ -48,46 +50,55 @@ public class PlayerNetworkComponent : MonoBehaviour
     public void Initialize(bool local)
     {
         isLocalPlayer = local;
-        
+        useSnapshotInterpolation =
+            !local && cachedNetworkManager != null && !cachedNetworkManager.isHost;
+
         if (!isLocalPlayer)
         {
-            if (playerController != null) 
+            if (playerController != null)
             {
                 playerController.enabled = false;
-                
+
                 if (playerController.cameraTransform != null)
                 {
                     Camera cam = playerController.cameraTransform.GetComponent<Camera>();
-                    if (cam != null) cam.enabled = false;
-                    
-                    var listeners = playerController.cameraTransform.GetComponentsInChildren<AudioListener>();
-                    foreach(var listener in listeners) listener.enabled = false;
+                    if (cam != null)
+                        cam.enabled = false;
+
+                    var listeners =
+                        playerController.cameraTransform.GetComponentsInChildren<AudioListener>();
+                    foreach (var listener in listeners)
+                        listener.enabled = false;
                 }
             }
-            
+
             PlayerInput input = GetComponent<PlayerInput>();
-            if (input != null) input.enabled = false;
+            if (input != null)
+                input.enabled = false;
         }
         else
         {
             if (playerController != null)
             {
                 playerController.enabled = true;
-                
+
                 if (playerController.cameraTransform != null)
                 {
                     playerController.cameraTransform.gameObject.SetActive(true);
-                    
-                    var listeners = playerController.cameraTransform.GetComponentsInChildren<AudioListener>();
-                    foreach(var listener in listeners) listener.enabled = true;
-                    
+
+                    var listeners =
+                        playerController.cameraTransform.GetComponentsInChildren<AudioListener>();
+                    foreach (var listener in listeners)
+                        listener.enabled = true;
+
                     foreach (var cam in FindObjectsByType<Camera>(FindObjectsSortMode.None))
                     {
                         if (cam.transform != playerController.cameraTransform)
                         {
                             cam.enabled = false;
                             var l = cam.GetComponent<AudioListener>();
-                            if (l != null) l.enabled = false;
+                            if (l != null)
+                                l.enabled = false;
                         }
                     }
                 }
@@ -99,7 +110,8 @@ public class PlayerNetworkComponent : MonoBehaviour
 
     private void UpdateNetworkState(Vector3 pos, Quaternion rot)
     {
-        if (isLocalPlayer) return;
+        if (isLocalPlayer)
+            return;
 
         targetPosition = pos;
         targetRotation = rot;
@@ -113,38 +125,53 @@ public class PlayerNetworkComponent : MonoBehaviour
             {
                 if (networkObject != null)
                 {
-                     if (cachedNetworkManager != null && cachedNetworkManager.isHost)
-                     {
-                         networkObject.MarkDirty();
-                     }
-                     else if (cachedNetworkManager != null && cachedNetworkManager.isConnected)
-                     {
-                         cachedNetworkManager.SendMyPlayerTransform(networkObject.objectId, transform.position, transform.rotation);
-                     }
+                    if (cachedNetworkManager != null && cachedNetworkManager.isHost)
+                    {
+                        networkObject.MarkDirty();
+                    }
+                    else if (
+                        cachedNetworkManager != null
+                        && cachedNetworkManager.isConnected
+                        && Time.time - lastSendTime >= SEND_INTERVAL
+                    )
+                    {
+                        cachedNetworkManager.SendMyPlayerTransform(
+                            networkObject.objectId,
+                            transform.position,
+                            transform.rotation
+                        );
+                        lastSendTime = Time.time;
+                    }
                 }
-                
+
                 OnTransformModified?.Invoke();
                 transform.hasChanged = false;
             }
             return;
         }
 
-        if (Vector3.Distance(transform.position, targetPosition) > 0.01f)
+        if (useSnapshotInterpolation && networkObject != null)
         {
-            transform.position = Vector3.Lerp(transform.position, targetPosition, Time.deltaTime * interpolationSpeed);
+            var (pos, rot, valid) = networkObject.InterpolateState();
+            if (valid)
+            {
+                transform.position = pos;
+                transform.rotation = rot;
+            }
         }
         else
         {
-            transform.position = targetPosition;
-        }
+            transform.position = Vector3.Lerp(
+                transform.position,
+                targetPosition,
+                interpolationSpeed * Time.deltaTime
+            );
 
-        if (Quaternion.Angle(transform.rotation, targetRotation) > 0.01f)
-        {
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * interpolationSpeed);
-        }
-        else
-        {
-            transform.rotation = targetRotation;
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation,
+                targetRotation,
+                interpolationSpeed * Time.deltaTime
+            );
         }
     }
 }

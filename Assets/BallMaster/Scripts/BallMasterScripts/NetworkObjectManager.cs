@@ -1,10 +1,11 @@
-using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 public class NetworkObjectManager : MonoBehaviour
 {
-    private Dictionary<string, NetworkObject> networkObjects = new Dictionary<string, NetworkObject>();
+    private Dictionary<string, NetworkObject> networkObjects =
+        new Dictionary<string, NetworkObject>();
 
     void Awake()
     {
@@ -15,7 +16,7 @@ public class NetworkObjectManager : MonoBehaviour
     {
         NetworkObject[] objects = FindObjectsByType<NetworkObject>(FindObjectsSortMode.None);
         networkObjects.Clear();
-        
+
         foreach (var obj in objects)
         {
             if (!string.IsNullOrEmpty(obj.objectId))
@@ -24,7 +25,7 @@ public class NetworkObjectManager : MonoBehaviour
             }
         }
     }
-    
+
     public IEnumerable<NetworkObject> GetAllNetworkObjects()
     {
         return networkObjects.Values;
@@ -42,10 +43,7 @@ public class NetworkObjectManager : MonoBehaviour
     public void RegisterNetworkObject(NetworkObject obj)
     {
         if (obj == null || string.IsNullOrEmpty(obj.objectId))
-        {
-            Debug.LogWarning("Attempted to register invalid NetworkObject");
             return;
-        }
 
         if (!networkObjects.ContainsKey(obj.objectId))
         {

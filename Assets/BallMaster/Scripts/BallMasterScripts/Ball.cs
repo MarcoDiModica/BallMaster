@@ -1,19 +1,23 @@
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody))]
 [RequireComponent(typeof(NetworkObject))]
 public class Ball : MonoBehaviour
 {
-    public enum BallState { Cold, Hot }
-    
+    public enum BallState
+    {
+        Cold,
+        Hot,
+    }
+
     public BallState currentState = BallState.Cold;
     public string ownerPlayerId = "";
     public float hotSpeed = 20f;
     public int maxBouncesWithoutGravity = 3;
     public float normalGravity = -9.81f;
     public float pickupCooldown = 0.5f;
-    
+
     private Rigidbody rb;
     private NetworkObject networkObject;
     private Vector3 velocity;
@@ -22,7 +26,7 @@ public class Ball : MonoBehaviour
     private Transform equipTransform;
     private float lastLaunchTime = -999f;
     private Collider lastLauncherCollider;
-    
+
     public string equippedPlayerId { get; private set; } = "";
 
     void Awake()
@@ -52,25 +56,25 @@ public class Ball : MonoBehaviour
         bounceCount = 0;
         velocity = direction.normalized * hotSpeed;
         lastLaunchTime = Time.time;
-        
+
         isEquipped = false;
         equipTransform = null;
         equippedPlayerId = "";
-        
+
         transform.SetParent(null);
-        
+
         if (launchPosition.HasValue)
         {
             transform.position = launchPosition.Value;
         }
-        
+
         rb.interpolation = RigidbodyInterpolation.Interpolate;
         rb.useGravity = false;
         rb.isKinematic = false;
         rb.linearVelocity = velocity;
-        
+
         GetComponent<Collider>().enabled = true;
-        
+
         if (networkObjectManager != null)
         {
             NetworkObject launcher = networkObjectManager.GetNetworkObject(launcherId);
@@ -90,12 +94,12 @@ public class Ball : MonoBehaviour
     private IEnumerator RestoreCollisionAfterDelay(Collider launcherCollider, float delay)
     {
         yield return new WaitForSeconds(delay);
-        
+
         if (launcherCollider != null && GetComponent<Collider>() != null)
         {
             Physics.IgnoreCollision(GetComponent<Collider>(), launcherCollider, false);
         }
-        
+
         lastLauncherCollider = null;
     }
 
@@ -109,29 +113,29 @@ public class Ball : MonoBehaviour
     {
         isEquipped = true;
         equipTransform = parent;
-        
+
         GetComponent<Collider>().enabled = false;
-        
+
         if (lastLauncherCollider != null)
         {
             Physics.IgnoreCollision(GetComponent<Collider>(), lastLauncherCollider, false);
             lastLauncherCollider = null;
         }
-        
+
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
 
         rb.interpolation = RigidbodyInterpolation.None;
         rb.isKinematic = true;
         rb.useGravity = false;
-        
+
         transform.SetParent(parent);
-        
+
         yield return null;
-        
+
         transform.localPosition = Vector3.zero;
         transform.localRotation = Quaternion.identity;
-        
+
         Physics.SyncTransforms();
     }
 
@@ -140,15 +144,15 @@ public class Ball : MonoBehaviour
         isEquipped = false;
         equipTransform = null;
         equippedPlayerId = "";
-        
+
         transform.SetParent(null);
-        
+
         rb.interpolation = RigidbodyInterpolation.Interpolate;
         rb.isKinematic = false;
         rb.useGravity = true;
-        
+
         GetComponent<Collider>().enabled = true;
-        
+
         Physics.SyncTransforms();
     }
 
@@ -156,10 +160,10 @@ public class Ball : MonoBehaviour
     {
         if (Time.time - lastLaunchTime < pickupCooldown)
             return false;
-        
+
         if (currentState == BallState.Hot && playerId != ownerPlayerId)
             return false;
-        
+
         return true;
     }
 
@@ -182,11 +186,11 @@ public class Ball : MonoBehaviour
         if (currentState == BallState.Hot)
         {
             PlayerController player = collision.gameObject.GetComponent<PlayerController>();
-            
+
             if (player != null)
             {
                 NetworkObject playerNetObj = player.GetComponent<NetworkObject>();
-                
+
                 if (playerNetObj != null && playerNetObj.objectId != ownerPlayerId)
                 {
                     if (ballManager != null)
@@ -198,7 +202,7 @@ public class Ball : MonoBehaviour
             }
 
             bounceCount++;
-            
+
             if (bounceCount < maxBouncesWithoutGravity)
             {
                 Vector3 reflection = Vector3.Reflect(velocity, collision.contacts[0].normal);
@@ -228,21 +232,28 @@ public class Ball : MonoBehaviour
         }
     }
 
-    public void UpdateNetworkState(Vector3 pos, Quaternion rot, Vector3 vel, BallState state, string owner, int bounces)
+    public void UpdateNetworkState(
+        Vector3 pos,
+        Quaternion rot,
+        Vector3 vel,
+        BallState state,
+        string owner,
+        int bounces
+    )
     {
         if (isEquipped)
             return;
 
         transform.position = pos;
         transform.rotation = rot;
-        
+
         velocity = vel;
         currentState = state;
         ownerPlayerId = owner;
         bounceCount = bounces;
-        
+
         rb.isKinematic = false;
-        
+
         if (state == BallState.Hot && bounces < maxBouncesWithoutGravity)
         {
             rb.useGravity = false;
@@ -251,7 +262,7 @@ public class Ball : MonoBehaviour
         {
             rb.useGravity = true;
         }
-        
+
         rb.linearVelocity = vel;
     }
 }

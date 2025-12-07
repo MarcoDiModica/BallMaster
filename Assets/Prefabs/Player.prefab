@@ -451,7 +451,7 @@ MonoBehaviour:
   airControl: 0.5
   jumpForce: 15
   gravity: -39.24
-  slowedSpeed: 6
+  slowedSpeed: 5
   forwardBoost: 30
   slideSpeed: 12
   slideDuration: 0.8
