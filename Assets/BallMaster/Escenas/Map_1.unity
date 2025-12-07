@@ -7729,6 +7729,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 054b79497e5f0684dae818eee5df3580, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ReplicationManagerClient
+  playerPrefab: {fileID: 6600956380747670767, guid: dd78d9859eb0cce4a9c81e2fd49dbe4e, type: 3}
+  ballPrefab: {fileID: 4060056396160618066, guid: 95863cf06a8a8874e86426706df4379d, type: 3}
 --- !u!114 &1341556029
 MonoBehaviour:
   m_ObjectHideFlags: 0

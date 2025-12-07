@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine.InputSystem;
 
 public class BallManager : MonoBehaviour
 {
@@ -7,23 +8,23 @@ public class BallManager : MonoBehaviour
     [SerializeField] private NetworkManager networkManager;
     [SerializeField] private NetworkObjectManager networkObjectManager;
 
+    private ReplicationManagerServer replicationServer;
+
     public GameObject ballPrefab;
     public Transform[] ballSpawnPoints;
     
     private Dictionary<string, Ball> balls = new Dictionary<string, Ball>();
     private int nextBallId = 0;
     
-    
     void Start()
     {
         if (networkManager == null)
-        {
             networkManager = FindFirstObjectByType<NetworkManager>();
-            if (networkManager != null)
-            {
-                networkManager.RegisterBallManager(this);
-            }
-        }
+
+        if (networkManager != null)
+            networkManager.RegisterBallManager(this);
+            
+        replicationServer = FindFirstObjectByType<ReplicationManagerServer>();
 
         if (networkManager != null && networkManager.isHost)
         {
@@ -35,32 +36,37 @@ public class BallManager : MonoBehaviour
     {
         if (networkManager != null && networkManager.isHost)
         {
-            List<BallStateData> dirtyBalls = new List<BallStateData>();
-            
-            foreach(var ball in balls.Values)
+            if (Keyboard.current.yKey.wasPressedThisFrame)
             {
-                if(ball.currentState == Ball.BallState.Hot || ball.transform.hasChanged)
+                Vector3 spawnPos = new Vector3(0, 5, 0); 
+                if (Camera.main != null)
                 {
-                    ball.transform.hasChanged = false;
-                    
-                    Rigidbody rb = ball.GetComponent<Rigidbody>();
-                    dirtyBalls.Add(new BallStateData
-                    {
-                        ballId = ball.GetComponent<NetworkObject>().objectId,
-                        position = ball.transform.position,
-                        rotation = ball.transform.rotation,
-                        velocity = rb.linearVelocity,
-                        state = (byte)ball.currentState,
-                        ownerPlayerId = ball.ownerPlayerId,
-                        bounceCount = ball.maxBouncesWithoutGravity,
-                        equippedPlayerId = ball.equippedPlayerId
-                    });
+                    spawnPos = Camera.main.transform.position + Camera.main.transform.forward * 3f;
                 }
+                else
+                {
+                     spawnPos = new Vector3(Random.Range(-5f, 5f), 5f, Random.Range(-5f, 5f));
+                }
+                
+                SpawnBall("ball_debug_" + nextBallId, spawnPos);
+                nextBallId++;
             }
-            
-            if (dirtyBalls.Count > 0)
+
+            if (replicationServer != null)
             {
-                networkManager.SendBallStates(dirtyBalls);
+                foreach(var ball in balls.Values)
+                {
+                    if(ball.transform.hasChanged)
+                    {
+                        ball.transform.hasChanged = false;
+                        NetworkObject netObj = ball.GetComponent<NetworkObject>();
+                        if (netObj != null) 
+                        {
+                            netObj.MarkDirty();
+                            replicationServer.MarkDirty(netObj.objectId); 
+                        }
+                    }
+                }
             }
         }
     }
@@ -76,13 +82,12 @@ public class BallManager : MonoBehaviour
 
     public void SpawnBall(string ballId, Vector3 position)
     {
-        if (balls.ContainsKey(ballId))
-        {
-            return;
-        }
+        if (balls.ContainsKey(ballId)) return;
 
         GameObject ballObj = Instantiate(ballPrefab, position, Quaternion.identity);
         NetworkObject netObj = ballObj.GetComponent<NetworkObject>();
+        if (netObj == null) netObj = ballObj.AddComponent<NetworkObject>();
+        
         netObj.objectId = ballId;
 
         Ball ball = ballObj.GetComponent<Ball>();
@@ -93,12 +98,16 @@ public class BallManager : MonoBehaviour
         {
             networkObjectManager.RegisterNetworkObject(netObj);
         }
+        
+        if (replicationServer != null)
+        {
+            replicationServer.RegisterObject(ballId, ReplicatedObjectType.Ball);
+        }
     }
 
     public void RespawnBall(string ballId)
     {
-        if (!balls.ContainsKey(ballId))
-            return;
+        if (!balls.ContainsKey(ballId)) return;
 
         Ball ball = balls[ballId];
         Vector3 spawnPos = ballSpawnPoints[Random.Range(0, ballSpawnPoints.Length)].position;
@@ -113,6 +122,9 @@ public class BallManager : MonoBehaviour
         rb.angularVelocity = Vector3.zero;
         rb.useGravity = false;
         rb.isKinematic = true;
+        
+        NetworkObject netObj = ball.GetComponent<NetworkObject>();
+        if (netObj != null) netObj.MarkDirty(); 
     }
 
     public void OnBallHitPlayer(PlayerController player)
@@ -120,115 +132,8 @@ public class BallManager : MonoBehaviour
         if (networkManager != null && networkManager.isHost)
         {
              player.RequestRespawn();
-             
-             foreach(var ball in balls.Values)
-             {
-                 if(ball.ownerPlayerId == "") continue;
-             }
+             //no funciona
         }
-    }
-
-    public void ApplyBallStates(List<BallStateData> ballStates)
-    {
-        foreach (var state in ballStates)
-        {
-            if (balls.ContainsKey(state.ballId))
-            {
-                Ball ball = balls[state.ballId];
-                
-                bool shouldBeEquipped = !string.IsNullOrEmpty(state.equippedPlayerId);
-                bool currentlyEquipped = !string.IsNullOrEmpty(ball.equippedPlayerId);
-                
-                if (shouldBeEquipped && !currentlyEquipped)
-                {
-                    EquipBallNetworked(state.ballId, state.equippedPlayerId);
-                }
-                else if (!shouldBeEquipped)
-                {
-                    ball.UpdateNetworkState(
-                        state.position,
-                        state.rotation,
-                        state.velocity,
-                        (Ball.BallState)state.state,
-                        state.ownerPlayerId,
-                        state.bounceCount
-                    );
-                }
-            }
-        }
-    }
-
-    public ExistingBallsData GetExistingBallsData()
-    {
-        ExistingBallsData ballsData = new ExistingBallsData();
-
-        foreach (var kvp in balls)
-        {
-            Ball ball = kvp.Value;
-            Rigidbody rb = ball.GetComponent<Rigidbody>();
-
-            ballsData.balls.Add(new ExistingBallData
-            {
-                ballId = kvp.Key,
-                position = ball.transform.position,
-                rotation = ball.transform.rotation,
-                velocity = rb.linearVelocity,
-                state = (byte)ball.currentState,
-                ownerPlayerId = ball.ownerPlayerId,
-                bounceCount = ball.maxBouncesWithoutGravity,
-                equippedPlayerId = ball.equippedPlayerId
-            });
-        }
-
-        return ballsData;
-    }
-
-    public void SpawnExistingBalls(ExistingBallsData ballsData)
-    {
-        foreach (var ballData in ballsData.balls)
-        {
-            if (!balls.ContainsKey(ballData.ballId))
-            {
-                GameObject ballObj = Instantiate(ballPrefab, ballData.position, ballData.rotation);
-                NetworkObject netObj = ballObj.GetComponent<NetworkObject>();
-                netObj.objectId = ballData.ballId;
-
-                Ball ball = ballObj.GetComponent<Ball>();
-                ball.Initialize(this, networkObjectManager);
-                ball.currentState = (Ball.BallState)ballData.state;
-                ball.ownerPlayerId = ballData.ownerPlayerId;
-
-                Rigidbody rb = ball.GetComponent<Rigidbody>();
-                rb.linearVelocity = ballData.velocity;
-
-                if (ball.currentState == Ball.BallState.Hot)
-                {
-                    rb.useGravity = false;
-                }
-
-                balls[ballData.ballId] = ball;
-
-                if (networkObjectManager != null)
-                {
-                    networkObjectManager.RegisterNetworkObject(netObj);
-                }
-                
-                if (!string.IsNullOrEmpty(ballData.equippedPlayerId))
-                {
-                    EquipBallNetworked(ballData.ballId, ballData.equippedPlayerId);
-                }
-            }
-        }
-    }
-
-    public Ball GetBall(string ballId)
-    {
-        return balls.ContainsKey(ballId) ? balls[ballId] : null;
-    }
-
-    public Dictionary<string, Ball> GetAllBalls()
-    {
-        return balls;
     }
     
     public void EquipBallNetworked(string ballId, string playerId)
@@ -247,5 +152,15 @@ public class BallManager : MonoBehaviour
                 }
             }
         }
+    }
+    
+    public Ball GetBall(string ballId)
+    {
+        return balls.ContainsKey(ballId) ? balls[ballId] : null;
+    }
+
+    public Dictionary<string, Ball> GetAllBalls()
+    {
+        return balls;
     }
 }

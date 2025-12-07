@@ -6,14 +6,14 @@ public enum ReplicationCommand : byte
 {
     Create = 0,
     Update = 1,
-    Destroy = 2
+    Destroy = 2,
 }
 
 public enum ReplicatedObjectType : byte
 {
     Player = 0,
     Ball = 1,
-    NetworkObject = 2
+    NetworkObject = 2,
 }
 
 [Serializable]
@@ -30,12 +30,14 @@ public class ReplicationPacket
 public class ReplicationManagerServer : MonoBehaviour
 {
     [Header("Configuration")]
-    public float replicationInterval = 0.1f;
+    public float replicationInterval = 0.033f; //30hz
 
     private NetworkManager networkManager;
     private NetworkObjectManager networkObjectManager;
 
-    private Dictionary<string, ReplicatedObjectType> registeredObjects = new Dictionary<string, ReplicatedObjectType>();
+    private Dictionary<string, ReplicatedObjectType> registeredObjects =
+        new Dictionary<string, ReplicatedObjectType>();
+
     private List<ReplicationPacket> pendingPackets = new List<ReplicationPacket>();
     private float lastReplicationTime;
 
@@ -53,10 +55,22 @@ public class ReplicationManagerServer : MonoBehaviour
         }
     }
 
-    void Update()
+    void LateUpdate()
     {
         if (networkManager == null || !networkManager.isHost || !networkManager.isConnected)
             return;
+
+        if (networkObjectManager != null)
+        {
+            foreach (var netObj in networkObjectManager.GetAllNetworkObjects())
+            {
+                if (netObj.isDirty && registeredObjects.ContainsKey(netObj.objectId))
+                {
+                    MarkDirty(netObj.objectId);
+                    netObj.isDirty = false;
+                }
+            }
+        }
 
         if (Time.time - lastReplicationTime >= replicationInterval)
         {
@@ -70,8 +84,8 @@ public class ReplicationManagerServer : MonoBehaviour
         if (!registeredObjects.ContainsKey(networkId))
         {
             registeredObjects[networkId] = objectType;
-            
             QueueCommand(ReplicationCommand.Create, networkId, objectType);
+            Debug.Log($"[Server] Registered Object {networkId} as {objectType}");
         }
     }
 
@@ -81,8 +95,8 @@ public class ReplicationManagerServer : MonoBehaviour
         {
             ReplicatedObjectType objectType = registeredObjects[networkId];
             registeredObjects.Remove(networkId);
-            
             QueueCommand(ReplicationCommand.Destroy, networkId, objectType);
+            Debug.Log($"[Server] Unregistered Object {networkId}");
         }
     }
 
@@ -94,30 +108,80 @@ public class ReplicationManagerServer : MonoBehaviour
         }
     }
 
-    private void QueueCommand(ReplicationCommand command, string networkId, ReplicatedObjectType objectType)
+    public void SendInitialStateToClient(string clientId)
+    {
+        List<ReplicationPacket> initialPackets = new List<ReplicationPacket>();
+
+        foreach (var kvp in registeredObjects)
+        {
+            string id = kvp.Key;
+            ReplicatedObjectType type = kvp.Value;
+
+            ReplicationPacket packet = CreatePacket(ReplicationCommand.Create, id, type);
+            if (packet != null)
+                initialPackets.Add(packet);
+        }
+
+        if (initialPackets.Count > 0)
+        {
+            byte[] data = NetworkProtocolBinary.SerializeReplicationPackets(initialPackets);
+            networkManager.SendReplicationDataToClient(clientId, data);
+            Debug.Log(
+                $"[Server] Sent initial state with {initialPackets.Count} objects to {clientId}"
+            );
+        }
+    }
+
+    private void QueueCommand(
+        ReplicationCommand command,
+        string networkId,
+        ReplicatedObjectType objectType
+    )
+    {
+        ReplicationPacket packet = CreatePacket(command, networkId, objectType);
+        if (packet != null)
+        {
+            pendingPackets.Add(packet);
+        }
+    }
+
+    private ReplicationPacket CreatePacket(
+        ReplicationCommand command,
+        string networkId,
+        ReplicatedObjectType objectType
+    )
     {
         NetworkObject netObj = networkObjectManager?.GetNetworkObject(networkId);
-        
-        ReplicationPacket packet = new ReplicationPacket
+
+        Vector3 pos = Vector3.zero;
+        Quaternion rot = Quaternion.identity;
+        Vector3 vel = Vector3.zero;
+
+        if (netObj != null)
+        {
+            pos = netObj.transform.position;
+            rot = netObj.transform.rotation;
+
+            Rigidbody rb = netObj.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                vel = rb.linearVelocity;
+            }
+        }
+        else if (command != ReplicationCommand.Destroy)
+        {
+            return null;
+        }
+
+        return new ReplicationPacket
         {
             command = command,
             networkId = networkId,
             objectType = objectType,
-            position = netObj != null ? netObj.transform.position : Vector3.zero,
-            rotation = netObj != null ? netObj.transform.rotation : Quaternion.identity,
-            velocity = Vector3.zero
+            position = pos,
+            rotation = rot,
+            velocity = vel,
         };
-
-        if (netObj != null)
-        {
-            Rigidbody rb = netObj.GetComponent<Rigidbody>();
-            if (rb != null)
-            {
-                packet.velocity = rb.linearVelocity;
-            }
-        }
-
-        pendingPackets.Add(packet);
     }
 
     private void BroadcastReplicationPackets()
@@ -127,17 +191,7 @@ public class ReplicationManagerServer : MonoBehaviour
 
         byte[] data = NetworkProtocolBinary.SerializeReplicationPackets(pendingPackets);
         networkManager.SendReplicationData(data);
-        
+
         pendingPackets.Clear();
-    }
-
-    public Dictionary<string, ReplicatedObjectType> GetRegisteredObjects()
-    {
-        return new Dictionary<string, ReplicatedObjectType>(registeredObjects);
-    }
-
-    public int GetRegisteredObjectCount()
-    {
-        return registeredObjects.Count;
     }
 }

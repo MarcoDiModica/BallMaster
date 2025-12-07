@@ -12,15 +12,18 @@ public class PlayerNetworkComponent : MonoBehaviour
     private Vector3 targetPosition;
     private Quaternion targetRotation;
     
+    // Cache
     private NetworkObject networkObject;
     private PlayerController playerController;
     private NetworkManager cachedNetworkManager;
+    private PlayerManager playerManager;
 
     void Awake()
     {
         networkObject = GetComponent<NetworkObject>();
         playerController = GetComponent<PlayerController>();
         cachedNetworkManager = FindFirstObjectByType<NetworkManager>();
+        playerManager = FindFirstObjectByType<PlayerManager>();
         
         targetPosition = transform.position;
         targetRotation = transform.rotation;
@@ -54,7 +57,6 @@ public class PlayerNetworkComponent : MonoBehaviour
                 
                 if (playerController.cameraTransform != null)
                 {
-                    
                     Camera cam = playerController.cameraTransform.GetComponent<Camera>();
                     if (cam != null) cam.enabled = false;
                     
@@ -64,10 +66,7 @@ public class PlayerNetworkComponent : MonoBehaviour
             }
             
             PlayerInput input = GetComponent<PlayerInput>();
-            if (input != null)
-            {
-                input.enabled = false;
-            }
+            if (input != null) input.enabled = false;
         }
         else
         {
@@ -93,11 +92,6 @@ public class PlayerNetworkComponent : MonoBehaviour
                     }
                 }
             }
-            
-            if (IsClientOnly() && networkObject != null)
-            {
-                cachedNetworkManager.SendMyPlayerTransform(networkObject.objectId, transform.position, transform.rotation);
-            }
         }
     }
 
@@ -105,7 +99,7 @@ public class PlayerNetworkComponent : MonoBehaviour
 
     private void UpdateNetworkState(Vector3 pos, Quaternion rot)
     {
-        if (isLocalPlayer) return; 
+        if (isLocalPlayer) return;
 
         targetPosition = pos;
         targetRotation = rot;
@@ -119,13 +113,16 @@ public class PlayerNetworkComponent : MonoBehaviour
             {
                 if (networkObject != null)
                 {
-                    networkObject.MarkDirty();
-                    
-                    if (IsClientOnly())
-                    {
-                        cachedNetworkManager.SendMyPlayerTransform(networkObject.objectId, transform.position, transform.rotation);
-                    }
+                     if (cachedNetworkManager != null && cachedNetworkManager.isHost)
+                     {
+                         networkObject.MarkDirty();
+                     }
+                     else if (cachedNetworkManager != null && cachedNetworkManager.isConnected)
+                     {
+                         cachedNetworkManager.SendMyPlayerTransform(networkObject.objectId, transform.position, transform.rotation);
+                     }
                 }
+                
                 OnTransformModified?.Invoke();
                 transform.hasChanged = false;
             }
@@ -149,10 +146,5 @@ public class PlayerNetworkComponent : MonoBehaviour
         {
             transform.rotation = targetRotation;
         }
-    }
-
-    private bool IsClientOnly()
-    {
-        return cachedNetworkManager != null && cachedNetworkManager.isConnected && !cachedNetworkManager.isHost;
     }
 }

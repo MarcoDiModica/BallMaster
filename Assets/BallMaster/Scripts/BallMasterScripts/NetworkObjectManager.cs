@@ -61,21 +61,6 @@ public class NetworkObjectManager : MonoBehaviour
         }
     }
 
-    public void ApplyGameState(GameStateData state)
-    {
-        foreach (ObjectState objState in state.objects)
-        {
-            if (networkObjects.ContainsKey(objState.objectId))
-            {
-                networkObjects[objState.objectId].UpdateState(objState.position, objState.rotation);
-            }
-            else
-            {
-                Debug.LogWarning($"NetworkObject with ID {objState.objectId} not found in tracked objects.");
-            }
-        }
-    }
-
     public NetworkObject GetNetworkObject(string objectId)
     {
         return networkObjects.ContainsKey(objectId) ? networkObjects[objectId] : null;
