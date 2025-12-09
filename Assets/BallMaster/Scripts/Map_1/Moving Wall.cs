@@ -1,4 +1,5 @@
 using System.Collections;
+using DG.Tweening;
 using UnityEngine;
 
 [RequireComponent(typeof(NetworkObject))]
@@ -41,7 +42,6 @@ public class MovingWall : MonoBehaviour
             networkObjectManager.RegisterNetworkObject(networkObject);
         }
 
-        // Fix: Explicitly register with ReplicationServer if we are Host
         if (isHost)
         {
             var replicationServer = FindFirstObjectByType<ReplicationManagerServer>();
@@ -67,7 +67,6 @@ public class MovingWall : MonoBehaviour
             networkObject.OnStateUpdated -= OnNetworkStateUpdated;
         }
 
-        // Cleanup registration if needed (optional but good practice)
         if (isHost)
         {
             var replicationServer = FindFirstObjectByType<ReplicationManagerServer>();
@@ -91,40 +90,22 @@ public class MovingWall : MonoBehaviour
             yield return new WaitForSeconds(tiempoEspera);
 
             Vector3 posicionFinal = posicionInicial + Vector3.down * distanciaBajada;
-            float tiempoTranscurrido = 0f;
 
-            while (tiempoTranscurrido < duracionBajada)
-            {
-                transform.position = Vector3.Lerp(
-                    posicionInicial,
-                    posicionFinal,
-                    tiempoTranscurrido / duracionBajada
-                );
-                networkObject.isDirty = true;
-                tiempoTranscurrido += Time.deltaTime;
-                yield return null;
-            }
+            Tween bajar = transform
+                .DOMove(posicionFinal, duracionBajada)
+                .SetEase(Ease.InOutQuad)
+                .OnUpdate(() => networkObject.isDirty = true);
 
-            transform.position = posicionFinal;
-            networkObject.isDirty = true;
+            yield return bajar.WaitForCompletion();
 
             yield return new WaitForSeconds(tiempoEsperaSubida);
 
-            tiempoTranscurrido = 0f;
-            while (tiempoTranscurrido < duracionSubida)
-            {
-                transform.position = Vector3.Lerp(
-                    posicionFinal,
-                    posicionInicial,
-                    tiempoTranscurrido / duracionSubida
-                );
-                networkObject.isDirty = true;
-                tiempoTranscurrido += Time.deltaTime;
-                yield return null;
-            }
+            Tween subir = transform
+                .DOMove(posicionInicial, duracionSubida)
+                .SetEase(Ease.InOutQuad)
+                .OnUpdate(() => networkObject.isDirty = true);
 
-            transform.position = posicionInicial;
-            networkObject.isDirty = true;
+            yield return subir.WaitForCompletion();
         }
     }
 }

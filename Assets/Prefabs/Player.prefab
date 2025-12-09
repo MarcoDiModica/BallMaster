@@ -466,6 +466,18 @@ MonoBehaviour:
   groundCheckDistance: 0.2
   coyoteTime: 0.15
   jumpBufferTime: 0.2
+  wallRunSpeed: 10
+  wallDetectionDistance: 0.8
+  minWallRunHeight: 1.5
+  minWallRunSpeed: 3
+  wallRunLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  wallJumpUpForce: 15
+  wallJumpSideForce: 6
+  wallCoyoteTime: 0.15
+  wallKickWindow: 0.2
+  wallRunCameraTilt: 12
   slopeStickForce: 10
   slopeSlideMultiplier: 1.5
   maxSlopeAngle: 45
@@ -506,7 +518,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerInput
   mouseSensitivity: 0.2
-  gamepadSensitivity: 100
+  gamepadSensitivity: 300
 --- !u!1 &8618201539721975886
 GameObject:
   m_ObjectHideFlags: 0

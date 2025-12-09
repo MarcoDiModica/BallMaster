@@ -1,11 +1,12 @@
-using UnityEngine;
-using UnityEngine.UI;
-using UnityEngine.SceneManagement;
 using TMPro;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class MenuUI : MonoBehaviour
 {
-    [SerializeField] private NetworkManager networkManager;
+    [SerializeField]
+    private NetworkManager networkManager;
 
     [Header("Botones")]
     public Button hostButton;
@@ -19,6 +20,8 @@ public class MenuUI : MonoBehaviour
 
     void Start()
     {
+        QualitySettings.vSyncCount = 1;
+
         if (joinPanel != null)
             joinPanel.SetActive(false);
 
@@ -26,6 +29,8 @@ public class MenuUI : MonoBehaviour
         joinButton.onClick.AddListener(OnJoinClicked);
         connectButton.onClick.AddListener(OnConnectClicked);
         cancelButton.onClick.AddListener(OnCancelClicked);
+
+        hostButton.Select();
     }
 
     void OnHostClicked()
@@ -37,12 +42,14 @@ public class MenuUI : MonoBehaviour
     void OnJoinClicked()
     {
         joinPanel.SetActive(true);
+
+        ipInput.Select();
     }
 
     void OnConnectClicked()
     {
         string code = ipInput.text.Trim().ToUpper();
-        
+
         if (string.IsNullOrEmpty(code))
         {
             Debug.Log("Ingresa un código válido (ej: 5KY87S)");
@@ -56,5 +63,7 @@ public class MenuUI : MonoBehaviour
     void OnCancelClicked()
     {
         joinPanel.SetActive(false);
+
+        hostButton.Select();
     }
 }

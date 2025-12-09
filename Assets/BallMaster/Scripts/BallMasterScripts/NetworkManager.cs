@@ -111,7 +111,33 @@ public class NetworkManager : MonoBehaviour
         string ip = GetLocalIP();
         lobbyCode = GenerateRandomCode();
         codeToIPMap[lobbyCode] = ip;
-        StartUDP(port);
+
+        int maxRetries = 10;
+        int currentPort = port;
+        bool success = false;
+
+        for (int i = 0; i < maxRetries; i++)
+        {
+            try
+            {
+                StartUDP(currentPort);
+                port = currentPort;
+                success = true;
+                break;
+            }
+            catch (SocketException)
+            {
+                currentPort++;
+            }
+        }
+
+        if (!success)
+        {
+            Debug.LogError("Could not find available port after " + maxRetries + " attempts");
+            isHost = false;
+            return;
+        }
+
         isConnected = true;
     }
 
@@ -191,7 +217,8 @@ public class NetworkManager : MonoBehaviour
                 hostIP = DecodeIPFromCode(code);
             }
 
-            hostEndPoint = new IPEndPoint(IPAddress.Parse(hostIP), port);
+            int hostPort = DecodePortFromCode(code);
+            hostEndPoint = new IPEndPoint(IPAddress.Parse(hostIP), hostPort);
             StartUDP(0);
 
             currentLobbyCode = code;
@@ -759,8 +786,10 @@ public class NetworkManager : MonoBehaviour
 
         string ip = GetLocalIP();
         string ipEncoded = EncodeIPCompact(ip);
+        int portOffset = port - 4567;
+        string portSuffix = portOffset > 0 ? portOffset.ToString() : "";
 
-        return prefix + ipEncoded;
+        return prefix + ipEncoded + portSuffix;
     }
 
     string EncodeIPCompact(string ip)
@@ -773,8 +802,23 @@ public class NetworkManager : MonoBehaviour
     {
         string ip = GetLocalIP();
         string subnet = ip.Substring(0, ip.LastIndexOf('.'));
-        string lastPart = code.Substring(2).TrimStart('0');
-        return subnet + "." + lastPart;
+        string ipPart = code.Substring(2, 3).TrimStart('0');
+        if (string.IsNullOrEmpty(ipPart))
+            ipPart = "0";
+        return subnet + "." + ipPart;
+    }
+
+    int DecodePortFromCode(string code)
+    {
+        if (code.Length > 5)
+        {
+            string portPart = code.Substring(5);
+            if (int.TryParse(portPart, out int offset))
+            {
+                return 4567 + offset;
+            }
+        }
+        return 4567;
     }
 
     public void Disconnect()

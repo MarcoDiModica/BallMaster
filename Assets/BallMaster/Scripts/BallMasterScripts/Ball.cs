@@ -1,4 +1,5 @@
 using System.Collections;
+using DG.Tweening;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody))]
@@ -179,21 +180,12 @@ public class Ball : MonoBehaviour
 
         yield return null;
 
-        Vector3 startPos = transform.localPosition;
-        Quaternion startRot = transform.localRotation;
-        float elapsed = 0f;
+        transform.DOLocalMove(Vector3.zero, equipTransitionDuration).SetEase(Ease.OutQuad);
+        transform
+            .DOLocalRotateQuaternion(Quaternion.identity, equipTransitionDuration)
+            .SetEase(Ease.OutQuad);
 
-        while (elapsed < equipTransitionDuration)
-        {
-            elapsed += Time.deltaTime;
-            float t = Mathf.SmoothStep(0f, 1f, elapsed / equipTransitionDuration);
-            transform.localPosition = Vector3.Lerp(startPos, Vector3.zero, t);
-            transform.localRotation = Quaternion.Slerp(startRot, Quaternion.identity, t);
-            yield return null;
-        }
-
-        transform.localPosition = Vector3.zero;
-        transform.localRotation = Quaternion.identity;
+        yield return new WaitForSeconds(equipTransitionDuration);
 
         Physics.SyncTransforms();
     }

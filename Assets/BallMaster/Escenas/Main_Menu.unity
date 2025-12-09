@@ -1712,7 +1712,7 @@ MonoBehaviour:
   m_ScrollWheelAction: {fileID: 6240969308177333660, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
   m_TrackedDevicePositionAction: {fileID: 6564999863303420839, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
   m_TrackedDeviceOrientationAction: {fileID: 7970375526676320489, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
-  m_DeselectOnBackgroundClick: 1
+  m_DeselectOnBackgroundClick: 0
   m_PointerBehavior: 0
   m_CursorLockBehavior: 0
   m_ScrollDeltaPerTick: 6
@@ -1758,6 +1758,7 @@ GameObject:
   - component: {fileID: 1139624598}
   - component: {fileID: 1139624597}
   - component: {fileID: 1139624596}
+  - component: {fileID: 1139624599}
   m_Layer: 5
   m_Name: Cancel
   m_TagString: Untagged
@@ -1867,6 +1868,22 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1139624594}
   m_CullTransparentMesh: 1
+--- !u!114 &1139624599
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1139624594}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 72eee549fd8c05f42b57a313295f73fa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ButtonTweenAnimation
+  hoverScale: 1.1
+  pressedScale: 0.95
+  animationDuration: 0.15
+  scaleEase: 27
 --- !u!1 &1353197085
 GameObject:
   m_ObjectHideFlags: 0
@@ -1879,6 +1896,7 @@ GameObject:
   - component: {fileID: 1353197089}
   - component: {fileID: 1353197088}
   - component: {fileID: 1353197087}
+  - component: {fileID: 1353197090}
   m_Layer: 5
   m_Name: Join
   m_TagString: Untagged
@@ -1988,6 +2006,22 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1353197085}
   m_CullTransparentMesh: 1
+--- !u!114 &1353197090
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1353197085}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 72eee549fd8c05f42b57a313295f73fa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ButtonTweenAnimation
+  hoverScale: 1.1
+  pressedScale: 0.95
+  animationDuration: 0.15
+  scaleEase: 27
 --- !u!1 &1507548502
 GameObject:
   m_ObjectHideFlags: 0
@@ -2127,6 +2161,7 @@ GameObject:
   - component: {fileID: 1656677067}
   - component: {fileID: 1656677066}
   - component: {fileID: 1656677065}
+  - component: {fileID: 1656677068}
   m_Layer: 5
   m_Name: Host
   m_TagString: Untagged
@@ -2236,6 +2271,22 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1656677063}
   m_CullTransparentMesh: 1
+--- !u!114 &1656677068
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1656677063}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 72eee549fd8c05f42b57a313295f73fa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ButtonTweenAnimation
+  hoverScale: 1.1
+  pressedScale: 0.95
+  animationDuration: 0.15
+  scaleEase: 27
 --- !u!1 &1724836070
 GameObject:
   m_ObjectHideFlags: 0
@@ -2462,6 +2513,7 @@ GameObject:
   - component: {fileID: 2109363701}
   - component: {fileID: 2109363700}
   - component: {fileID: 2109363699}
+  - component: {fileID: 2109363702}
   m_Layer: 5
   m_Name: Connect
   m_TagString: Untagged
@@ -2571,6 +2623,22 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2109363697}
   m_CullTransparentMesh: 1
+--- !u!114 &2109363702
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2109363697}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 72eee549fd8c05f42b57a313295f73fa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ButtonTweenAnimation
+  hoverScale: 1.1
+  pressedScale: 0.95
+  animationDuration: 0.15
+  scaleEase: 27
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
