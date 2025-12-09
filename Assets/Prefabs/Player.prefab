@@ -229,8 +229,8 @@ MonoBehaviour:
     m_Bits: 1
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
-  m_RenderPostProcessing: 0
-  m_Antialiasing: 0
+  m_RenderPostProcessing: 1
+  m_Antialiasing: 1
   m_AntialiasingQuality: 2
   m_StopNaN: 0
   m_Dithering: 0
@@ -451,7 +451,7 @@ MonoBehaviour:
   airControl: 0.5
   jumpForce: 15
   gravity: -39.24
-  slowedSpeed: 5
+  slowedSpeed: 6
   forwardBoost: 30
   slideSpeed: 12
   slideDuration: 0.8
@@ -460,14 +460,21 @@ MonoBehaviour:
   dashForce: 20
   dashDuration: 0.2
   airDashCooldown: 1
+  lowJumpMultiplier: 2.5
+  slideJumpBoost: 15
+  momentumDrag: 10
   groundCheckDistance: 0.2
   coyoteTime: 0.15
   jumpBufferTime: 0.2
   tiltAngle: 1.6
-  tiltSpeed: 8
-  bobFrequency: 15
+  tiltSpeed: 6
+  bobFrequency: 10
   bobAmplitude: 0.1
   slideCameraDrop: 0.5
+  baseFov: 80
+  sprintFov: 90
+  dashFov: 100
+  fovSpeed: 5
   cameraTransform: {fileID: 3501495713854449566}
   ballEquipTransform: {fileID: 4615012381204673833}
 --- !u!114 &5054427174947898379
