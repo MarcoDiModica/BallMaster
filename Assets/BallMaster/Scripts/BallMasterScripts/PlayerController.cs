@@ -34,6 +34,11 @@ public class PlayerController : MonoBehaviour
     public float coyoteTime = 0.15f;
     public float jumpBufferTime = 0.2f;
 
+    [Header("Slope Settings")]
+    public float slopeStickForce = 10f;
+    public float slopeSlideMultiplier = 1.5f;
+    public float maxSlopeAngle = 45f;
+
     [Header("Camera Juice")]
     public float tiltAngle = 2f;
     public float tiltSpeed = 5f;
@@ -53,13 +58,11 @@ public class PlayerController : MonoBehaviour
     private CharacterController controller;
     private Vector3 velocity;
 
-    //ground
     private float lastGroundedTime = 0f;
     private float lastJumpPressedTime = -1f;
     private bool isJumping = false;
     private bool isSprinting = false;
 
-    //slide
     private bool isSliding = false;
     private float slideTimer = 0f;
     private Vector3 slideDirection;
@@ -67,19 +70,21 @@ public class PlayerController : MonoBehaviour
     private float defaultCenterY;
     private float lastSlideTime = -10f;
 
-    //dash
     private bool isDashing = false;
     private float dashTimer = 0f;
     private float lastDashTime = -10f;
     private bool hasAirDashed = false;
 
-    //ball
     private Ball equippedBall = null;
     private bool isPaused = false;
     private float xRotation = 0f;
     private Vector2 currentInput;
     private float defaultYPos = 0;
     private float bobTimer = 0;
+
+    private Vector3 groundNormal = Vector3.up;
+    private bool isOnSlope = false;
+    private float currentSlopeAngle = 0f;
 
     void Awake()
     {
@@ -230,6 +235,7 @@ public class PlayerController : MonoBehaviour
             return;
 
         bool isGrounded = controller.isGrounded;
+        DetectSlope();
 
         if (isGrounded)
         {
@@ -249,6 +255,25 @@ public class PlayerController : MonoBehaviour
 
         Vector3 horzVel = new Vector3(velocity.x, 0, velocity.z);
         HandleCameraJuice(currentInput.x, horzVel.magnitude);
+    }
+
+    private void DetectSlope()
+    {
+        RaycastHit hit;
+        Vector3 origin = transform.position + Vector3.up * 0.1f;
+
+        if (Physics.Raycast(origin, Vector3.down, out hit, controller.height / 2f + 0.5f))
+        {
+            groundNormal = hit.normal;
+            currentSlopeAngle = Vector3.Angle(Vector3.up, groundNormal);
+            isOnSlope = currentSlopeAngle > 0.1f && currentSlopeAngle <= maxSlopeAngle;
+        }
+        else
+        {
+            groundNormal = Vector3.up;
+            currentSlopeAngle = 0f;
+            isOnSlope = false;
+        }
     }
 
     private bool HandleDash()
@@ -273,7 +298,27 @@ public class PlayerController : MonoBehaviour
     {
         if (isGrounded && velocity.y < 0)
         {
-            velocity.y = -2f;
+            if (isOnSlope && !isJumping)
+            {
+                Vector3 moveDir = new Vector3(velocity.x, 0, velocity.z).normalized;
+                float slopeInfluence = Vector3.Dot(
+                    moveDir,
+                    Vector3.ProjectOnPlane(Vector3.down, groundNormal).normalized
+                );
+
+                if (slopeInfluence > 0.1f)
+                {
+                    velocity.y = -slopeStickForce * (1f + currentSlopeAngle / maxSlopeAngle);
+                }
+                else
+                {
+                    velocity.y = -2f;
+                }
+            }
+            else
+            {
+                velocity.y = -2f;
+            }
         }
     }
 
@@ -310,9 +355,44 @@ public class PlayerController : MonoBehaviour
     {
         if (isSliding)
         {
-            float slideFriction = 2f;
-            velocity.x = Mathf.MoveTowards(velocity.x, 0, slideFriction * Time.deltaTime);
-            velocity.z = Mathf.MoveTowards(velocity.z, 0, slideFriction * Time.deltaTime);
+            if (isOnSlope && isGrounded)
+            {
+                Vector3 slopeDir = Vector3.ProjectOnPlane(Vector3.down, groundNormal).normalized;
+                float slopeAlignment = Vector3.Dot(slideDirection, slopeDir);
+
+                if (slopeAlignment > 0.1f)
+                {
+                    float slopeBoost = slopeSlideMultiplier * (currentSlopeAngle / maxSlopeAngle);
+                    velocity.x += slopeDir.x * slopeBoost * Time.deltaTime * slideSpeed;
+                    velocity.z += slopeDir.z * slopeBoost * Time.deltaTime * slideSpeed;
+
+                    Vector3 horzVel = new Vector3(velocity.x, 0, velocity.z);
+                    if (horzVel.magnitude > slideSpeed * 2f)
+                    {
+                        horzVel = horzVel.normalized * slideSpeed * 2f;
+                        velocity.x = horzVel.x;
+                        velocity.z = horzVel.z;
+                    }
+                }
+                else if (slopeAlignment < -0.1f)
+                {
+                    float slopeFriction = 8f * (currentSlopeAngle / maxSlopeAngle);
+                    velocity.x = Mathf.MoveTowards(velocity.x, 0, slopeFriction * Time.deltaTime);
+                    velocity.z = Mathf.MoveTowards(velocity.z, 0, slopeFriction * Time.deltaTime);
+                }
+                else
+                {
+                    float slideFriction = 2f;
+                    velocity.x = Mathf.MoveTowards(velocity.x, 0, slideFriction * Time.deltaTime);
+                    velocity.z = Mathf.MoveTowards(velocity.z, 0, slideFriction * Time.deltaTime);
+                }
+            }
+            else
+            {
+                float slideFriction = 2f;
+                velocity.x = Mathf.MoveTowards(velocity.x, 0, slideFriction * Time.deltaTime);
+                velocity.z = Mathf.MoveTowards(velocity.z, 0, slideFriction * Time.deltaTime);
+            }
 
             slideTimer -= Time.deltaTime;
             if (slideTimer <= 0)
