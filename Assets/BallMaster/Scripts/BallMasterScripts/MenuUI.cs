@@ -17,6 +17,7 @@ public class MenuUI : MonoBehaviour
     public TMP_InputField ipInput;
     public Button connectButton;
     public Button cancelButton;
+    public Button quitButton;
 
     void Start()
     {
@@ -29,6 +30,7 @@ public class MenuUI : MonoBehaviour
         joinButton.onClick.AddListener(OnJoinClicked);
         connectButton.onClick.AddListener(OnConnectClicked);
         cancelButton.onClick.AddListener(OnCancelClicked);
+        quitButton.onClick.AddListener(OnQuitClicked);
 
         hostButton.Select();
     }
@@ -65,5 +67,14 @@ public class MenuUI : MonoBehaviour
         joinPanel.SetActive(false);
 
         hostButton.Select();
+    }
+
+    void OnQuitClicked()
+    {
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
     }
 }

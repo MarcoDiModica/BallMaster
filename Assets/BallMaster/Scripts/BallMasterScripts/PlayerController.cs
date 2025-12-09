@@ -20,9 +20,6 @@ public class PlayerController : MonoBehaviour
     public float slideHeight = 0.5f;
     public float slideCooldown = 1f;
 
-    public float dashForce = 20f;
-    public float dashDuration = 0.2f;
-    public float airDashCooldown = 1f;
     public float lowJumpMultiplier = 2.5f;
 
     [Header("Momentum Settings")]
@@ -63,7 +60,6 @@ public class PlayerController : MonoBehaviour
     public float slideCameraDrop = 0.5f;
     public float baseFov = 60f;
     public float sprintFov = 75f;
-    public float dashFov = 85f;
     public float fovSpeed = 5f;
 
     [Header("References")]
@@ -86,11 +82,6 @@ public class PlayerController : MonoBehaviour
     private float defaultCenterY;
     private float lastSlideTime = -10f;
 
-    private bool isDashing = false;
-    private float dashTimer = 0f;
-    private float lastDashTime = -10f;
-    private bool hasAirDashed = false;
-
     private Ball equippedBall = null;
     private bool isPaused = false;
     private float xRotation = 0f;
@@ -109,6 +100,8 @@ public class PlayerController : MonoBehaviour
     private float lastWallTime = -10f;
     private float wallContactTime = -10f;
     private bool hasWallJumped = false;
+    private Vector3 lastWallNormalVector = Vector3.zero;
+    private float lastWallJumpTimeRef = -10f;
 
     void Awake()
     {
@@ -158,37 +151,13 @@ public class PlayerController : MonoBehaviour
         if (isPaused)
             return;
 
-        if (!controller.isGrounded)
-        {
-            if (!hasAirDashed && Time.time - lastDashTime > airDashCooldown)
-            {
-                StartDash();
-            }
-        }
-        else
+        if (controller.isGrounded)
         {
             if (!isSliding && Time.time - lastSlideTime > slideCooldown)
             {
                 StartSlide();
             }
         }
-    }
-
-    void StartDash()
-    {
-        isDashing = true;
-        dashTimer = dashDuration;
-        lastDashTime = Time.time;
-        hasAirDashed = true;
-
-        Vector3 dir = transform.right * currentInput.x + transform.forward * currentInput.y;
-        if (dir.magnitude < 0.1f)
-            dir = transform.forward;
-
-        Vector3 dashVel = dir.normalized * dashForce;
-        velocity.x = dashVel.x;
-        velocity.z = dashVel.z;
-        velocity.y = 0;
     }
 
     void StartSlide()
@@ -263,19 +232,16 @@ public class PlayerController : MonoBehaviour
 
         if (isGrounded)
         {
-            hasAirDashed = false;
             hasWallJumped = false;
             lastGroundedTime = Time.time;
             isJumping = false;
+            lastWallNormalVector = Vector3.zero;
 
             if (isWallRunning)
                 StopWallRun();
         }
 
         HandleWallRun();
-
-        if (HandleDash())
-            return;
 
         if (!isWallRunning)
         {
@@ -364,16 +330,13 @@ public class PlayerController : MonoBehaviour
         bool movingForward = currentInput.y > 0.1f;
         bool isFalling = velocity.y < 0;
 
-        if (
-            !isWallRunning
-            && wallDetected
-            && hasSpeed
-            && movingForward
-            && !hasWallJumped
-            && isFalling
-        )
+        if (!isWallRunning && wallDetected && hasSpeed && movingForward && isFalling)
         {
-            StartWallRun();
+            bool sameWall = Vector3.Dot(wallNormal, lastWallNormalVector) > 0.9f;
+            if (!sameWall)
+            {
+                StartWallRun();
+            }
         }
 
         if (isWallRunning)
@@ -419,24 +382,6 @@ public class PlayerController : MonoBehaviour
     {
         isWallRunning = false;
         lastWallTime = Time.time;
-    }
-
-    private bool HandleDash()
-    {
-        if (isDashing)
-        {
-            controller.Move(velocity * Time.deltaTime);
-            dashTimer -= Time.deltaTime;
-
-            if (dashTimer <= 0)
-            {
-                isDashing = false;
-                velocity.x *= 0.5f;
-                velocity.z *= 0.5f;
-            }
-            return true;
-        }
-        return false;
     }
 
     private void HandleGravity(bool isGrounded)
@@ -527,6 +472,9 @@ public class PlayerController : MonoBehaviour
     private void PerformWallJump()
     {
         StopWallRun();
+
+        lastWallNormalVector = wallNormal;
+        lastWallJumpTimeRef = Time.time;
 
         Vector3 currentHorizontal = new Vector3(velocity.x, 0, velocity.z);
         Vector3 wallPush = wallNormal * wallJumpSideForce;
@@ -670,7 +618,7 @@ public class PlayerController : MonoBehaviour
         {
             targetY -= slideCameraDrop;
         }
-        else if (speedParam > 0.1f && controller.isGrounded)
+        else if (speedParam > 0.1f && (controller.isGrounded || isWallRunning))
         {
             bool actualSprinting =
                 isSprinting && equippedBall == null && speedParam > walkSpeed + 1f;
@@ -689,8 +637,8 @@ public class PlayerController : MonoBehaviour
         if (playerCamera != null)
         {
             float targetFov = baseFov;
-            if (isDashing)
-                targetFov = dashFov;
+            if (isWallRunning)
+                targetFov = sprintFov;
             else if (isSprinting && equippedBall == null && speedParam > walkSpeed + 1f)
                 targetFov = sprintFov;
             else if (isSliding)

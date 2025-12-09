@@ -447,8 +447,8 @@ MonoBehaviour:
   walkSpeed: 5
   sprintSpeed: 8
   acceleration: 30
-  deceleration: 20
-  airControl: 0.5
+  deceleration: 40
+  airControl: 0.8
   jumpForce: 15
   gravity: -39.24
   slowedSpeed: 6
@@ -457,16 +457,13 @@ MonoBehaviour:
   slideDuration: 0.8
   slideHeight: 0.5
   slideCooldown: 1
-  dashForce: 20
-  dashDuration: 0.2
-  airDashCooldown: 1
   lowJumpMultiplier: 2.5
   slideJumpBoost: 15
   momentumDrag: 10
   groundCheckDistance: 0.2
   coyoteTime: 0.15
   jumpBufferTime: 0.2
-  wallRunSpeed: 10
+  wallRunSpeed: 8
   wallDetectionDistance: 0.8
   minWallRunHeight: 1.5
   minWallRunSpeed: 3
@@ -488,7 +485,6 @@ MonoBehaviour:
   slideCameraDrop: 0.2
   baseFov: 80
   sprintFov: 90
-  dashFov: 100
   fovSpeed: 5
   cameraTransform: {fileID: 3501495713854449566}
   ballEquipTransform: {fileID: 4615012381204673833}
