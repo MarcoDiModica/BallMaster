@@ -487,7 +487,6 @@ public class PlayerController : MonoBehaviour
         if (equippedBall == null)
             return;
 
-        // Aim Precision: Raycast from camera center
         Vector3 shootDirection = transform.forward;
         if (playerCamera != null)
         {
@@ -495,9 +494,6 @@ public class PlayerController : MonoBehaviour
             RaycastHit hit;
             Vector3 targetPoint;
 
-            // Use a mask if needed, for now hit everything except player (layer check?)
-            // Assuming player is on a layer or we use ignore helper.
-            // Simplified: Raycast against everything.
             if (Physics.Raycast(ray, out hit, 100f))
             {
                 targetPoint = hit.point;
@@ -539,9 +535,7 @@ public class PlayerController : MonoBehaviour
         if (equippedBall == null)
             return;
 
-        // Gentle forward toss
         Vector3 dropDirection = (transform.forward + Vector3.up * 0.2f).normalized * 5f;
-        // 5f is gentle speed
 
         string myId = GetComponent<NetworkObject>()?.objectId ?? "local";
         string ballId = equippedBall.GetComponent<NetworkObject>()?.objectId;

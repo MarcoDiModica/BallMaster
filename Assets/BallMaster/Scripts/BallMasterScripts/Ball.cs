@@ -126,7 +126,7 @@ public class Ball : MonoBehaviour
         }
 
         rb.interpolation = RigidbodyInterpolation.Interpolate;
-        rb.useGravity = true; // Drop uses gravity immediately
+        rb.useGravity = true;
         rb.isKinematic = false;
         rb.linearVelocity = velocity;
 

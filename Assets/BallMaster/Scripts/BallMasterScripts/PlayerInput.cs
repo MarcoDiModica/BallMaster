@@ -102,7 +102,7 @@ public class PlayerInput : MonoBehaviour
 
         if (
             (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame)
-            || (Gamepad.current != null && Gamepad.current.buttonEast.wasPressedThisFrame) // B/Circle usually
+            || (Gamepad.current != null && Gamepad.current.buttonEast.wasPressedThisFrame)
         )
         {
             playerController.TryDrop();
