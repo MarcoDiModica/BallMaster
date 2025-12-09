@@ -365,6 +365,11 @@ public class NetworkManager : MonoBehaviour
                 else
                     HandleBallDropUpdate(data);
                 break;
+                break;
+            case MessageType.PlayerRespawn:
+                if (!isHost)
+                    HandlePlayerRespawn(data);
+                break;
         }
     }
 
@@ -644,6 +649,49 @@ public class NetworkManager : MonoBehaviour
             if (ballManager != null)
             {
                 ballManager.EquipBallNetworked(equipData.ballId, equipData.playerId);
+            }
+        });
+    }
+
+    public void SendPlayerRespawn(string playerId, Vector3 position)
+    {
+        if (!isHost)
+            return;
+
+        string clientId = playerId.Replace("Player_", "");
+
+        if (clientIdToEndpoint.ContainsKey(clientId))
+        {
+            PlayerRespawnData respawnData = new PlayerRespawnData
+            {
+                playerId = playerId,
+                respawnPosition = position,
+            };
+
+            byte[] data = NetworkProtocolBinary.SerializePlayerRespawn(respawnData);
+            SendToClient(clientId, data);
+        }
+    }
+
+    void HandlePlayerRespawn(byte[] data)
+    {
+        PlayerRespawnData respawnData = NetworkProtocolBinary.DeserializePlayerRespawn(data);
+
+        ExecuteOnMainThread(() =>
+        {
+            if (networkObjectManager != null)
+            {
+                NetworkObject playerObj = networkObjectManager.GetNetworkObject(
+                    respawnData.playerId
+                );
+                if (playerObj != null)
+                {
+                    PlayerController pc = playerObj.GetComponent<PlayerController>();
+                    if (pc != null)
+                    {
+                        pc.Respawn(respawnData.respawnPosition);
+                    }
+                }
             }
         });
     }

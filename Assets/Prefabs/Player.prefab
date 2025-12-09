@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 8270142578811796707}
   - component: {fileID: 8048340293547962814}
   - component: {fileID: 4425160756708419817}
-  - component: {fileID: 2691223631594168054}
   m_Layer: 0
   m_Name: Cube
   m_TagString: Untagged
@@ -91,27 +90,6 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!65 &2691223631594168054
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2895696158999559941}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &4240949059063023548
 GameObject:
   m_ObjectHideFlags: 0
@@ -270,7 +248,7 @@ GameObject:
   - component: {fileID: 2484707744291602158}
   m_Layer: 0
   m_Name: Player
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -391,7 +369,7 @@ SphereCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Radius: 1.5
+  m_Radius: 2
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!143 &7263603218876691550
 CharacterController:
@@ -513,7 +491,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5285e2fe629cb594aa3477ace429284d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerInput
-  mouseSensitivity: 0.2
+  mouseSensitivity: 0.15
   gamepadSensitivity: 300
 --- !u!1 &8618201539721975886
 GameObject:

@@ -231,12 +231,44 @@ public class Ball : MonoBehaviour
 
     void OnCollisionEnter(Collision collision)
     {
+        HandleHit(collision.gameObject);
+
         if (isEquipped)
             return;
 
         if (currentState == BallState.Hot)
         {
-            PlayerController player = collision.gameObject.GetComponent<PlayerController>();
+            bounceCount++;
+
+            if (bounceCount < maxBouncesWithoutGravity)
+            {
+                if (collision.contacts.Length > 0)
+                {
+                    Vector3 reflection = Vector3.Reflect(velocity, collision.contacts[0].normal);
+                    velocity = reflection.normalized * hotSpeed;
+                    rb.linearVelocity = velocity;
+                }
+            }
+            else
+            {
+                TransitionToCold();
+            }
+        }
+    }
+
+    // void OnTriggerEnter(Collider other)
+    // {
+    //     HandleHit(other.gameObject);
+    // }
+
+    private void HandleHit(GameObject hitObject)
+    {
+        if (isEquipped)
+            return;
+
+        if (currentState == BallState.Hot)
+        {
+            PlayerController player = hitObject.GetComponentInParent<PlayerController>();
 
             if (player != null)
             {
@@ -248,21 +280,7 @@ public class Ball : MonoBehaviour
                     {
                         ballManager.OnBallHitPlayer(player);
                     }
-                    return;
                 }
-            }
-
-            bounceCount++;
-
-            if (bounceCount < maxBouncesWithoutGravity)
-            {
-                Vector3 reflection = Vector3.Reflect(velocity, collision.contacts[0].normal);
-                velocity = reflection.normalized * hotSpeed;
-                rb.linearVelocity = velocity;
-            }
-            else
-            {
-                TransitionToCold();
             }
         }
     }

@@ -16,6 +16,7 @@ public enum MessageType : byte
     Heartbeat,
     HeartbeatAck,
     BallDrop,
+    PlayerRespawn,
 }
 
 public class BallLaunchData
@@ -30,6 +31,12 @@ public class BallEquipData
 {
     public string ballId;
     public string playerId;
+}
+
+public class PlayerRespawnData
+{
+    public string playerId;
+    public Vector3 respawnPosition;
 }
 
 public class PlayerTransformData
@@ -220,6 +227,32 @@ public static class NetworkProtocolBinary
             {
                 ballId = reader.ReadString(),
                 playerId = reader.ReadString(),
+            };
+        }
+    }
+
+    public static byte[] SerializePlayerRespawn(PlayerRespawnData respawnData)
+    {
+        return Serialize(
+            MessageType.PlayerRespawn,
+            (writer) =>
+            {
+                writer.Write(respawnData.playerId);
+                WriteVector3(writer, respawnData.respawnPosition);
+            }
+        );
+    }
+
+    public static PlayerRespawnData DeserializePlayerRespawn(byte[] data)
+    {
+        using (MemoryStream stream = new MemoryStream(data))
+        using (BinaryReader reader = new BinaryReader(stream))
+        {
+            reader.ReadByte();
+            return new PlayerRespawnData
+            {
+                playerId = reader.ReadString(),
+                respawnPosition = ReadVector3(reader),
             };
         }
     }

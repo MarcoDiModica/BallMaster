@@ -15,7 +15,6 @@ GameObject:
   - component: {fileID: 777991475567306170}
   - component: {fileID: 990931944457432231}
   - component: {fileID: 2611818692944346891}
-  - component: {fileID: 7427610206663210796}
   m_Layer: 0
   m_Name: Ball
   m_TagString: Untagged
@@ -174,17 +173,5 @@ MonoBehaviour:
   hotSpeed: 50
   maxBouncesWithoutGravity: 3
   normalGravity: -19.62
+  equipTransitionDuration: 0.15
   pickupCooldown: 0.3
---- !u!114 &7427610206663210796
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4060056396160618066}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bda119fad24397c48bec363e9f437881, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::StandardNetworkTransform
-  interpolationSpeed: 15
