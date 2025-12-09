@@ -179,7 +179,6 @@ public class Ball : MonoBehaviour
 
         yield return null;
 
-        // Smooth transition to equip position
         Vector3 startPos = transform.localPosition;
         Quaternion startRot = transform.localRotation;
         float elapsed = 0f;

@@ -14,7 +14,7 @@ public class PlayerController : MonoBehaviour
     public float slowedSpeed = 3f;
     public float forwardBoost = 15f;
 
-    [Header("Advanced Movement")]
+    [Header("Slide/Dash")]
     public float slideSpeed = 12f;
     public float slideDuration = 0.8f;
     public float slideHeight = 0.5f;
@@ -33,6 +33,22 @@ public class PlayerController : MonoBehaviour
     public float groundCheckDistance = 0.2f;
     public float coyoteTime = 0.15f;
     public float jumpBufferTime = 0.2f;
+
+    [Header("Wall Run Settings")]
+    public float wallRunSpeed = 10f;
+    public float wallDetectionDistance = 0.8f;
+    public float minWallRunHeight = 1.5f;
+    public float minWallRunSpeed = 3f;
+    public LayerMask wallRunLayers = ~0;
+
+    [Header("Wall Jump Settings")]
+    public float wallJumpUpForce = 8f;
+    public float wallJumpSideForce = 6f;
+    public float wallCoyoteTime = 0.15f;
+    public float wallKickWindow = 0.2f;
+
+    [Header("Wall Run Camera")]
+    public float wallRunCameraTilt = 12f;
 
     [Header("Slope Settings")]
     public float slopeStickForce = 10f;
@@ -85,6 +101,14 @@ public class PlayerController : MonoBehaviour
     private Vector3 groundNormal = Vector3.up;
     private bool isOnSlope = false;
     private float currentSlopeAngle = 0f;
+
+    private bool isWallRunning = false;
+    private bool isWallLeft = false;
+    private bool isWallRight = false;
+    private Vector3 wallNormal = Vector3.zero;
+    private float lastWallTime = -10f;
+    private float wallContactTime = -10f;
+    private bool hasWallJumped = false;
 
     void Awake()
     {
@@ -240,16 +264,30 @@ public class PlayerController : MonoBehaviour
         if (isGrounded)
         {
             hasAirDashed = false;
+            hasWallJumped = false;
             lastGroundedTime = Time.time;
             isJumping = false;
+
+            if (isWallRunning)
+                StopWallRun();
         }
+
+        HandleWallRun();
 
         if (HandleDash())
             return;
 
-        HandleGravity(isGrounded);
+        if (!isWallRunning)
+        {
+            HandleGravity(isGrounded);
+        }
+
         HandleJumping(isGrounded);
-        HandleMovementPhysics(isGrounded);
+
+        if (!isWallRunning)
+        {
+            HandleMovementPhysics(isGrounded);
+        }
 
         controller.Move(velocity * Time.deltaTime);
 
@@ -274,6 +312,113 @@ public class PlayerController : MonoBehaviour
             currentSlopeAngle = 0f;
             isOnSlope = false;
         }
+    }
+
+    private void DetectWalls()
+    {
+        if (controller.isGrounded)
+        {
+            isWallLeft = false;
+            isWallRight = false;
+            return;
+        }
+
+        if (Physics.Raycast(transform.position, Vector3.down, minWallRunHeight))
+        {
+            isWallLeft = false;
+            isWallRight = false;
+            return;
+        }
+
+        RaycastHit leftHit,
+            rightHit;
+        Vector3 origin = transform.position + Vector3.up * 0.5f;
+
+        isWallLeft = Physics.Raycast(
+            origin,
+            -transform.right,
+            out leftHit,
+            wallDetectionDistance,
+            wallRunLayers
+        );
+        isWallRight = Physics.Raycast(
+            origin,
+            transform.right,
+            out rightHit,
+            wallDetectionDistance,
+            wallRunLayers
+        );
+
+        if (isWallLeft)
+            wallNormal = leftHit.normal;
+        else if (isWallRight)
+            wallNormal = rightHit.normal;
+    }
+
+    private void HandleWallRun()
+    {
+        DetectWalls();
+
+        bool wallDetected = isWallLeft || isWallRight;
+        bool hasSpeed = new Vector3(velocity.x, 0, velocity.z).magnitude > minWallRunSpeed;
+        bool movingForward = currentInput.y > 0.1f;
+        bool isFalling = velocity.y < 0;
+
+        if (
+            !isWallRunning
+            && wallDetected
+            && hasSpeed
+            && movingForward
+            && !hasWallJumped
+            && isFalling
+        )
+        {
+            StartWallRun();
+        }
+
+        if (isWallRunning)
+        {
+            UpdateWallRun();
+        }
+
+        if (wallDetected && !isWallRunning)
+        {
+            wallContactTime = Time.time;
+        }
+    }
+
+    private void StartWallRun()
+    {
+        isWallRunning = true;
+        velocity.y = 0;
+    }
+
+    private void UpdateWallRun()
+    {
+        lastWallTime = Time.time;
+
+        bool wallLost = !isWallLeft && !isWallRight;
+        bool grounded = controller.isGrounded;
+
+        if (wallLost || grounded)
+        {
+            StopWallRun();
+            return;
+        }
+
+        Vector3 wallForward = Vector3.Cross(wallNormal, Vector3.up);
+
+        if (Vector3.Dot(wallForward, transform.forward) < 0)
+            wallForward = -wallForward;
+
+        velocity = wallForward * wallRunSpeed;
+        velocity.y = 0;
+    }
+
+    private void StopWallRun()
+    {
+        isWallRunning = false;
+        lastWallTime = Time.time;
     }
 
     private bool HandleDash()
@@ -324,8 +469,33 @@ public class PlayerController : MonoBehaviour
 
     private void HandleJumping(bool isGrounded)
     {
-        bool canJump = isGrounded || ((Time.time - lastGroundedTime) <= coyoteTime);
         bool jumpRequested = (Time.time - lastJumpPressedTime) <= jumpBufferTime;
+
+        if (jumpRequested && !isGrounded)
+        {
+            if (isWallRunning)
+            {
+                PerformWallJump();
+                return;
+            }
+
+            bool inWallCoyote = (Time.time - lastWallTime) <= wallCoyoteTime;
+            if (inWallCoyote && !hasWallJumped)
+            {
+                PerformWallJump();
+                return;
+            }
+
+            bool wallDetected = isWallLeft || isWallRight;
+            bool inWallKickWindow = (Time.time - wallContactTime) <= wallKickWindow;
+            if ((wallDetected || inWallKickWindow) && !hasWallJumped)
+            {
+                PerformWallJump();
+                return;
+            }
+        }
+
+        bool canJump = isGrounded || ((Time.time - lastGroundedTime) <= coyoteTime);
 
         if (canJump && jumpRequested && !isJumping)
         {
@@ -348,7 +518,26 @@ public class PlayerController : MonoBehaviour
             velocity.y += gravity * (lowJumpMultiplier - 1) * Time.deltaTime;
         }
 
-        velocity.y += gravity * Time.deltaTime;
+        if (!isWallRunning)
+        {
+            velocity.y += gravity * Time.deltaTime;
+        }
+    }
+
+    private void PerformWallJump()
+    {
+        StopWallRun();
+
+        Vector3 currentHorizontal = new Vector3(velocity.x, 0, velocity.z);
+        Vector3 wallPush = wallNormal * wallJumpSideForce;
+
+        velocity.x = currentHorizontal.x + wallPush.x;
+        velocity.z = currentHorizontal.z + wallPush.z;
+        velocity.y = wallJumpUpForce;
+
+        hasWallJumped = true;
+        lastJumpPressedTime = -1f;
+        isJumping = true;
     }
 
     private void HandleMovementPhysics(bool isGrounded)
@@ -460,6 +649,12 @@ public class PlayerController : MonoBehaviour
             return;
 
         float targetTilt = -inputX * tiltAngle;
+
+        if (isWallRunning)
+        {
+            targetTilt = isWallLeft ? -wallRunCameraTilt : wallRunCameraTilt;
+        }
+
         Quaternion currentRot = cameraTransform.localRotation;
         float newZ = Mathf.LerpAngle(
             currentRot.eulerAngles.z,
