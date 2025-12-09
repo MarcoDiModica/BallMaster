@@ -110,7 +110,7 @@ public class PlayerInput : MonoBehaviour
 
         bool isSprinting =
             (Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed)
-            || (Gamepad.current != null && Gamepad.current.leftStickButton.isPressed);
+            || (Gamepad.current != null && Gamepad.current.leftTrigger.isPressed);
         playerController.SetSprint(isSprinting);
 
         if (
@@ -120,7 +120,7 @@ public class PlayerInput : MonoBehaviour
                     Keyboard.current.leftCtrlKey.wasPressedThisFrame
                     || Keyboard.current.cKey.wasPressedThisFrame
                 )
-            ) || (Gamepad.current != null && Gamepad.current.buttonEast.wasPressedThisFrame)
+            ) || (Gamepad.current != null && (Gamepad.current.rightStickButton.wasPressedThisFrame))
         )
         {
             playerController.TrySlideOrDash();

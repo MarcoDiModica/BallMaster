@@ -16,6 +16,7 @@ public class Ball : MonoBehaviour
     public float hotSpeed = 20f;
     public int maxBouncesWithoutGravity = 3;
     public float normalGravity = -9.81f;
+    public float equipTransitionDuration = 0.15f;
     public float pickupCooldown = 0.5f;
 
     private Rigidbody rb;
@@ -177,6 +178,20 @@ public class Ball : MonoBehaviour
         transform.SetParent(parent);
 
         yield return null;
+
+        // Smooth transition to equip position
+        Vector3 startPos = transform.localPosition;
+        Quaternion startRot = transform.localRotation;
+        float elapsed = 0f;
+
+        while (elapsed < equipTransitionDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.SmoothStep(0f, 1f, elapsed / equipTransitionDuration);
+            transform.localPosition = Vector3.Lerp(startPos, Vector3.zero, t);
+            transform.localRotation = Quaternion.Slerp(startRot, Quaternion.identity, t);
+            yield return null;
+        }
 
         transform.localPosition = Vector3.zero;
         transform.localRotation = Quaternion.identity;

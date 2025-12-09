@@ -400,7 +400,8 @@ public class PlayerController : MonoBehaviour
         }
         else
         {
-            float targetSpeed = isSprinting ? sprintSpeed : walkSpeed;
+            bool canSprint = isSprinting && equippedBall == null;
+            float targetSpeed = canSprint ? sprintSpeed : walkSpeed;
             if (equippedBall != null)
                 targetSpeed = slowedSpeed;
 
@@ -476,7 +477,9 @@ public class PlayerController : MonoBehaviour
         }
         else if (speedParam > 0.1f && controller.isGrounded)
         {
-            bobTimer += Time.deltaTime * bobFrequency * (isSprinting ? 1.5f : 1f);
+            bool actualSprinting =
+                isSprinting && equippedBall == null && speedParam > walkSpeed + 1f;
+            bobTimer += Time.deltaTime * bobFrequency * (actualSprinting ? 1.5f : 1f);
             targetY += Mathf.Sin(bobTimer) * bobAmplitude;
         }
         else
@@ -493,7 +496,7 @@ public class PlayerController : MonoBehaviour
             float targetFov = baseFov;
             if (isDashing)
                 targetFov = dashFov;
-            else if (isSprinting && speedParam > walkSpeed + 1f)
+            else if (isSprinting && equippedBall == null && speedParam > walkSpeed + 1f)
                 targetFov = sprintFov;
             else if (isSliding)
                 targetFov = sprintFov;

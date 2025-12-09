@@ -466,11 +466,14 @@ MonoBehaviour:
   groundCheckDistance: 0.2
   coyoteTime: 0.15
   jumpBufferTime: 0.2
+  slopeStickForce: 10
+  slopeSlideMultiplier: 1.5
+  maxSlopeAngle: 45
   tiltAngle: 1.6
   tiltSpeed: 6
   bobFrequency: 10
   bobAmplitude: 0.1
-  slideCameraDrop: 0.5
+  slideCameraDrop: 0.2
   baseFov: 80
   sprintFov: 90
   dashFov: 100
@@ -529,7 +532,7 @@ Transform:
   m_GameObject: {fileID: 8618201539721975886}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.25900006, y: -0.293, z: 0.929}
+  m_LocalPosition: {x: 0.68, y: -0.293, z: 0.929}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
