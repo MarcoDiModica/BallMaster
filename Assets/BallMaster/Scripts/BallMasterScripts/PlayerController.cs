@@ -699,6 +699,10 @@ public class PlayerController : MonoBehaviour
     public void EquipBall(Ball ball)
     {
         equippedBall = ball;
+
+        if (ball == null)
+            return;
+
         string myId = GetComponent<NetworkObject>()?.objectId ?? "local";
 
         if (ballEquipTransform != null)

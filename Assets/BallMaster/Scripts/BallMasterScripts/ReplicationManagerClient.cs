@@ -111,6 +111,12 @@ public class ReplicationManagerClient : MonoBehaviour
                         playerManager != null && playerManager.IsMyPlayer(packet.networkId);
                     pnc.Initialize(isMine);
                 }
+
+                PlayerController pc = newObj.GetComponent<PlayerController>();
+                if (pc != null && playerManager != null)
+                {
+                    pc.Initialize(playerManager);
+                }
             }
 
             RegisterWithSpecificManager(newObj, packet.objectType, packet.networkId);
