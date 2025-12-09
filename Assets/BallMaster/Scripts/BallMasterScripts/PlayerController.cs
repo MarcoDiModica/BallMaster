@@ -1,5 +1,7 @@
 using UnityEngine;
 
+//se tendria que separar en varios scripts pero la emocion ha podido conmigo
+
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
 {
@@ -14,7 +16,7 @@ public class PlayerController : MonoBehaviour
     public float slowedSpeed = 3f;
     public float forwardBoost = 15f;
 
-    [Header("Slide/Dash")]
+    [Header("Slide")]
     public float slideSpeed = 12f;
     public float slideDuration = 0.8f;
     public float slideHeight = 0.5f;
@@ -102,6 +104,7 @@ public class PlayerController : MonoBehaviour
     private bool hasWallJumped = false;
     private Vector3 lastWallNormalVector = Vector3.zero;
     private float lastWallJumpTimeRef = -10f;
+    private bool justStoppedSliding = false;
 
     void Awake()
     {
@@ -182,9 +185,12 @@ public class PlayerController : MonoBehaviour
 
     void StopSlide()
     {
+        if (!isSliding)
+            return;
         isSliding = false;
         controller.height = defaultHeight;
         controller.center = new Vector3(0, defaultCenterY, 0);
+        justStoppedSliding = true;
     }
 
     public void Look(Vector2 delta)
@@ -255,7 +261,22 @@ public class PlayerController : MonoBehaviour
             HandleMovementPhysics(isGrounded);
         }
 
+        Vector3 posBefore = transform.position;
         controller.Move(velocity * Time.deltaTime);
+        Vector3 posAfter = transform.position;
+
+        if (justStoppedSliding)
+        {
+            float outputY = posAfter.y - posBefore.y;
+            float expectedY = velocity.y * Time.deltaTime;
+            float pop = outputY - expectedY;
+
+            if (Mathf.Abs(pop) > 0.001f && cameraTransform != null)
+            {
+                cameraTransform.localPosition -= Vector3.up * pop;
+            }
+            justStoppedSliding = false;
+        }
 
         Vector3 horzVel = new Vector3(velocity.x, 0, velocity.z);
         HandleCameraJuice(currentInput.x, horzVel.magnitude);

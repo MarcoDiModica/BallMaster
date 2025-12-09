@@ -21,8 +21,6 @@ public class MenuUI : MonoBehaviour
 
     void Start()
     {
-        QualitySettings.vSyncCount = 1;
-
         if (joinPanel != null)
             joinPanel.SetActive(false);
 
