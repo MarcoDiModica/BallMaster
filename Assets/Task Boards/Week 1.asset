@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 09b49f6b7bb4ebe439d3f656799a5e49, type: 3}
+  m_Name: Week 1
+  m_EditorClassIdentifier: TaskCanvas.Runtime::TaskCanvas.KanbanBoard
+  boardName: My Board
+  columns:
+  - id: 4b28e104-77ec-410f-972e-c22d9e9df559
+    title: "\U0001F4CB To Do"
+    headerColor: {r: 0.4, g: 0.6, b: 0.9, a: 1}
+    cards:
+    - id: b854db7a-4fbb-493f-a677-c6b9f1260bc5
+      title: New Task
+      description: 
+      color: {r: 0.5, g: 0.7, b: 1, a: 1}
+      priority: 0
+      tags: []
+      assigneeIds: []
+      createdAt: 1765397214
+      updatedAt: 1765397221
+  - id: 39bf1658-56e4-40c3-9c8c-d88900be5199
+    title: "\U0001F504 In Progress"
+    headerColor: {r: 0.9, g: 0.7, b: 0.3, a: 1}
+    cards:
+    - id: 2832e231-d00a-4c82-b11a-79937b421da8
+      title: Go to the Bathroom
+      description: Just going to the Bathroom
+      color: {r: 0.5, g: 0.7, b: 1, a: 1}
+      priority: 2
+      tags:
+      - desing
+      - art
+      - marketing
+      assigneeIds: []
+      createdAt: 1765397145
+      updatedAt: 1765397227
+  - id: d4030868-6d28-43f6-90ad-39b5637749b5
+    title: "\u2705 Done"
+    headerColor: {r: 0.4, g: 0.8, b: 0.5, a: 1}
+    cards: []
+  assignees: []
+  allTags:
+  - bug
+  - feature
+  - urgent
+  - desing
+  - art
+  - marketing

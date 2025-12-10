@@ -1,0 +1,433 @@
+/* TaskCanvas Dark Theme */
+
+/* ============================================
+   ROOT & WINDOW
+   ============================================ */
+.task-canvas-root {
+    flex-grow: 1;
+    background-color: #1e1e1e;
+}
+
+/* ============================================
+   TOOLBAR
+   ============================================ */
+.toolbar {
+    flex-direction: row;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: #252526;
+    border-bottom-width: 1px;
+    border-bottom-color: #3c3c3c;
+    min-height: 40px;
+}
+
+.toolbar-title {
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: #e0e0e0;
+    margin-right: 16px;
+}
+
+.toolbar-button {
+    background-color: #0e639c;
+    color: #ffffff;
+    border-radius: 4px;
+    padding: 6px 12px;
+    margin-left: 8px;
+    border-width: 0;
+    -unity-font-style: bold;
+}
+
+.toolbar-button:hover {
+    background-color: #1177bb;
+}
+
+.toolbar-button:active {
+    background-color: #0d5a8c;
+}
+
+.theme-toggle {
+    background-color: #3c3c3c;
+    border-radius: 4px;
+    padding: 6px 10px;
+    margin-left: auto;
+    border-width: 0;
+    color: #e0e0e0;
+}
+
+.theme-toggle:hover {
+    background-color: #4a4a4a;
+}
+
+.board-dropdown {
+    min-width: 150px;
+    margin-left: 8px;
+    background-color: #3c3c3c;
+    border-radius: 4px;
+    border-width: 0;
+    color: #e0e0e0;
+}
+
+/* ============================================
+   FILTER BAR
+   ============================================ */
+.filter-bar {
+    flex-direction: row;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: #2d2d30;
+    border-bottom-width: 1px;
+    border-bottom-color: #3c3c3c;
+    flex-wrap: wrap;
+}
+
+.filter-label {
+    color: #888888;
+    margin-right: 8px;
+    font-size: 12px;
+}
+
+.filter-chip {
+    background-color: #3c3c3c;
+    border-radius: 12px;
+    padding: 4px 10px;
+    margin: 2px 4px;
+    color: #e0e0e0;
+    font-size: 11px;
+    border-width: 1px;
+    border-color: #4a4a4a;
+}
+
+.filter-chip:hover {
+    background-color: #4a4a4a;
+    border-color: #5a5a5a;
+}
+
+.filter-chip.active {
+    background-color: #0e639c;
+    border-color: #1177bb;
+    color: #ffffff;
+}
+
+.filter-chip-clear {
+    background-color: #5a3030;
+    color: #ffaaaa;
+}
+
+.filter-chip-clear:hover {
+    background-color: #6a4040;
+}
+
+.assignee-chip {
+    border-left-width: 3px;
+}
+
+/* ============================================
+   COLUMNS CONTAINER
+   ============================================ */
+.columns-container {
+    flex-direction: row;
+    flex-grow: 1;
+    padding: 16px;
+    overflow: hidden;
+}
+
+/* ============================================
+   COLUMN
+   ============================================ */
+.kanban-column {
+    width: 280px;
+    min-width: 280px;
+    background-color: #252526;
+    border-radius: 8px;
+    margin-right: 12px;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.column-header {
+    padding: 12px 16px;
+    background-color: #2d2d30;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.column-title {
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: #e0e0e0;
+}
+
+.column-count {
+    font-size: 11px;
+    color: #888888;
+    background-color: #3c3c3c;
+    border-radius: 10px;
+    padding: 2px 8px;
+    margin-left: 8px;
+}
+
+.column-cards-scroll {
+    flex-grow: 1;
+    padding: 8px;
+}
+
+.column-cards {
+    flex-grow: 1;
+}
+
+.column-add-button {
+    margin: 8px;
+    margin-top: 4px;
+    padding: 8px;
+    background-color: #3c3c3c;
+    border-radius: 6px;
+    border-width: 0;
+    color: #888888;
+    -unity-text-align: middle-center;
+}
+
+.column-add-button:hover {
+    background-color: #4a4a4a;
+    color: #e0e0e0;
+}
+
+/* ============================================
+   CARD
+   ============================================ */
+.kanban-card {
+    background-color: #2d2d30;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 8px;
+    border-left-width: 4px;
+    border-left-color: #4a9eff;
+}
+
+.kanban-card:hover {
+    background-color: #363639;
+}
+
+.kanban-card.dragging {
+    opacity: 0.6;
+    background-color: #404045;
+}
+
+.kanban-card.priority-high {
+    border-left-color: #ff6b6b;
+}
+
+.kanban-card.priority-medium {
+    border-left-color: #ffd93d;
+}
+
+.kanban-card.priority-low {
+    border-left-color: #6bcb77;
+}
+
+.card-title {
+    font-size: 13px;
+    color: #e0e0e0;
+    -unity-font-style: bold;
+    margin-bottom: 6px;
+    white-space: normal;
+}
+
+.card-description {
+    font-size: 11px;
+    color: #888888;
+    margin-bottom: 8px;
+    white-space: normal;
+}
+
+.card-footer {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.card-tag {
+    background-color: #3c3c3c;
+    border-radius: 4px;
+    padding: 2px 6px;
+    margin-right: 4px;
+    margin-bottom: 4px;
+    font-size: 10px;
+    color: #aaaaaa;
+}
+
+.card-assignee {
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    margin-right: 4px;
+    -unity-text-align: middle-center;
+    font-size: 10px;
+    color: #ffffff;
+    -unity-font-style: bold;
+}
+
+/* ============================================
+   DROP ZONE
+   ============================================ */
+.drop-zone {
+    min-height: 60px;
+    border-width: 2px;
+    border-color: transparent;
+    border-radius: 6px;
+    margin: 4px;
+}
+
+.drop-zone.drag-over {
+    border-color: #0e639c;
+    background-color: rgba(14, 99, 156, 0.1);
+}
+
+/* ============================================
+   MODAL / POPUP
+   ============================================ */
+.modal-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: #2d2d30;
+    border-radius: 8px;
+    padding: 20px;
+    min-width: 350px;
+    max-width: 450px;
+}
+
+.modal-title {
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: #e0e0e0;
+    margin-bottom: 16px;
+}
+
+.modal-field {
+    margin-bottom: 12px;
+}
+
+.modal-field-label {
+    font-size: 11px;
+    color: #888888;
+    margin-bottom: 4px;
+}
+
+.modal-text-field {
+    background-color: #1e1e1e;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: #3c3c3c;
+    padding: 8px;
+    color: #e0e0e0;
+}
+
+.modal-text-field:focus {
+    border-color: #0e639c;
+}
+
+.modal-buttons {
+    flex-direction: row;
+    justify-content: flex-end;
+    margin-top: 16px;
+}
+
+.modal-button {
+    padding: 8px 16px;
+    border-radius: 4px;
+    margin-left: 8px;
+    border-width: 0;
+}
+
+.modal-button-primary {
+    background-color: #0e639c;
+    color: #ffffff;
+}
+
+.modal-button-primary:hover {
+    background-color: #1177bb;
+}
+
+.modal-button-secondary {
+    background-color: #3c3c3c;
+    color: #e0e0e0;
+}
+
+.modal-button-secondary:hover {
+    background-color: #4a4a4a;
+}
+
+.modal-button-danger {
+    background-color: #5a3030;
+    color: #ffaaaa;
+}
+
+.modal-button-danger:hover {
+    background-color: #6a4040;
+}
+
+/* ============================================
+   EMPTY STATE
+   ============================================ */
+.empty-state {
+    flex-grow: 1;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+}
+
+.empty-state-text {
+    font-size: 14px;
+    color: #888888;
+    -unity-text-align: middle-center;
+    margin-bottom: 16px;
+}
+
+/* ============================================
+   PRIORITY SELECTOR
+   ============================================ */
+.priority-selector {
+    flex-direction: row;
+    margin-top: 4px;
+}
+
+.priority-option {
+    padding: 6px 12px;
+    margin-right: 4px;
+    border-radius: 4px;
+    background-color: #3c3c3c;
+    color: #888888;
+    border-width: 0;
+}
+
+.priority-option:hover {
+    background-color: #4a4a4a;
+}
+
+.priority-option.selected {
+    color: #ffffff;
+}
+
+.priority-option.priority-low.selected {
+    background-color: #2a5a32;
+}
+
+.priority-option.priority-medium.selected {
+    background-color: #6b5a1e;
+}
+
+.priority-option.priority-high.selected {
+    background-color: #5a2a2a;
+}
