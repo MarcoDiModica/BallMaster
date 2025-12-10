@@ -7,6 +7,7 @@ namespace TaskCanvas.Editor
 {
     /// <summary>
     /// Filter bar component for filtering cards by tags and assignees.
+    /// Uses inline wrapping instead of scrollbars.
     /// </summary>
     public class FilterBar : VisualElement
     {
@@ -19,6 +20,8 @@ namespace TaskCanvas.Editor
         private VisualElement _tagsContainer;
         private VisualElement _assigneesContainer;
         private Button _clearButton;
+        private bool _isExpanded = false;
+        private Button _expandButton;
 
         public List<string> ActiveTagFilters => new List<string>(_activeTagFilters);
         public List<string> ActiveAssigneeFilters => new List<string>(_activeAssigneeFilters);
@@ -32,6 +35,9 @@ namespace TaskCanvas.Editor
 
         private void BuildUI()
         {
+            style.flexWrap = Wrap.Wrap;
+            style.alignItems = Align.Center;
+
             // Tags section
             var tagsLabel = new Label("Tags:");
             tagsLabel.AddToClassList("filter-label");
@@ -40,11 +46,12 @@ namespace TaskCanvas.Editor
             _tagsContainer = new VisualElement();
             _tagsContainer.style.flexDirection = FlexDirection.Row;
             _tagsContainer.style.flexWrap = Wrap.Wrap;
+            _tagsContainer.style.flexShrink = 1;
             Add(_tagsContainer);
 
             // Separator
             var separator = new VisualElement();
-            separator.style.width = 20;
+            separator.style.width = 16;
             Add(separator);
 
             // Assignees section
@@ -55,6 +62,7 @@ namespace TaskCanvas.Editor
             _assigneesContainer = new VisualElement();
             _assigneesContainer.style.flexDirection = FlexDirection.Row;
             _assigneesContainer.style.flexWrap = Wrap.Wrap;
+            _assigneesContainer.style.flexShrink = 1;
             Add(_assigneesContainer);
 
             // Clear button
@@ -63,6 +71,7 @@ namespace TaskCanvas.Editor
             _clearButton.AddToClassList("filter-chip");
             _clearButton.AddToClassList("filter-chip-clear");
             _clearButton.style.display = DisplayStyle.None;
+            _clearButton.style.marginLeft = 8;
             Add(_clearButton);
 
             RefreshFilters();
@@ -82,8 +91,22 @@ namespace TaskCanvas.Editor
             if (_board == null || _board.allTags == null)
                 return;
 
+            // Show max 8 tags inline, rest in a "+N more" chip
+            int maxVisible = 8;
+            int count = 0;
+
             foreach (var tag in _board.allTags)
             {
+                if (count >= maxVisible && _board.allTags.Count > maxVisible + 1)
+                {
+                    var moreChip = new Button(ToggleExpand);
+                    moreChip.text = $"+{_board.allTags.Count - maxVisible} more";
+                    moreChip.AddToClassList("filter-chip");
+                    moreChip.AddToClassList("filter-chip-more");
+                    _tagsContainer.Add(moreChip);
+                    break;
+                }
+
                 var chip = new Button(() => ToggleTagFilter(tag));
                 chip.text = $"#{tag}";
                 chip.AddToClassList("filter-chip");
@@ -92,6 +115,7 @@ namespace TaskCanvas.Editor
                     chip.AddToClassList("active");
 
                 _tagsContainer.Add(chip);
+                count++;
             }
         }
 
@@ -102,8 +126,22 @@ namespace TaskCanvas.Editor
             if (_board == null || _board.assignees == null)
                 return;
 
+            // Show max 6 assignees inline
+            int maxVisible = 6;
+            int count = 0;
+
             foreach (var assignee in _board.assignees)
             {
+                if (count >= maxVisible && _board.assignees.Count > maxVisible + 1)
+                {
+                    var moreChip = new Button(ToggleExpand);
+                    moreChip.text = $"+{_board.assignees.Count - maxVisible} more";
+                    moreChip.AddToClassList("filter-chip");
+                    moreChip.AddToClassList("filter-chip-more");
+                    _assigneesContainer.Add(moreChip);
+                    break;
+                }
+
                 var chip = new Button(() => ToggleAssigneeFilter(assignee.id));
                 chip.text = $"👤 {assignee.name}";
                 chip.AddToClassList("filter-chip");
@@ -114,7 +152,15 @@ namespace TaskCanvas.Editor
                     chip.AddToClassList("active");
 
                 _assigneesContainer.Add(chip);
+                count++;
             }
+        }
+
+        private void ToggleExpand()
+        {
+            _isExpanded = !_isExpanded;
+            // For now just refresh - in expanded mode show all
+            RefreshFilters();
         }
 
         private void ToggleTagFilter(string tag)

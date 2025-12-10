@@ -17,6 +17,7 @@ namespace TaskCanvas
         public int priority; // 0 = Low, 1 = Medium, 2 = High
         public List<string> tags = new List<string>();
         public List<string> assigneeIds = new List<string>();
+        public bool isCompleted;
         public long createdAt;
         public long updatedAt;
 
