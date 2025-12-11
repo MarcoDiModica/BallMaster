@@ -4,9 +4,6 @@ using UnityEngine;
 
 namespace TaskCanvas
 {
-    /// <summary>
-    /// Represents a single task card on the Kanban board.
-    /// </summary>
     [Serializable]
     public class KanbanCard
     {
@@ -14,7 +11,7 @@ namespace TaskCanvas
         public string title;
         public string description;
         public Color color = new Color(0.5f, 0.7f, 1f);
-        public int priority; // 0 = Low, 1 = Medium, 2 = High
+        public int priority;
         public List<string> tags = new List<string>();
         public List<string> assigneeIds = new List<string>();
         public bool isCompleted;

@@ -6,9 +6,6 @@ using UnityEngine.UIElements;
 
 namespace TaskCanvas.Editor
 {
-    /// <summary>
-    /// Popup for managing tags on a board.
-    /// </summary>
     public class TagEditPopup : VisualElement
     {
         private KanbanBoard _board;
@@ -32,25 +29,21 @@ namespace TaskCanvas.Editor
             content.AddToClassList("modal-content");
             Add(content);
 
-            // Title
             var title = new Label("Manage Tags");
             title.AddToClassList("modal-title");
             content.Add(title);
 
-            // Existing tags list with scroll
             _tagsList = new ScrollView(ScrollViewMode.Vertical);
             _tagsList.style.maxHeight = 200;
             _tagsList.style.marginBottom = 16;
             content.Add(_tagsList);
             RefreshTagsList();
 
-            // New tag section
             var newSection = new Label("Add New Tag");
             newSection.AddToClassList("modal-field-label");
             newSection.style.marginTop = 12;
             content.Add(newSection);
 
-            // Name field
             var nameGroup = new VisualElement();
             nameGroup.AddToClassList("modal-field");
             content.Add(nameGroup);
@@ -63,7 +56,6 @@ namespace TaskCanvas.Editor
             _nameField.AddToClassList("modal-text-field");
             nameGroup.Add(_nameField);
 
-            // Color field
             var colorGroup = new VisualElement();
             colorGroup.AddToClassList("modal-field");
             content.Add(colorGroup);
@@ -76,7 +68,6 @@ namespace TaskCanvas.Editor
             _colorField.value = new Color(0.6f, 0.4f, 0.8f);
             colorGroup.Add(_colorField);
 
-            // Add button
             var addBtn = new Button(AddTag);
             addBtn.text = "+ Add Tag";
             addBtn.AddToClassList("modal-button");
@@ -84,7 +75,6 @@ namespace TaskCanvas.Editor
             addBtn.style.marginTop = 8;
             content.Add(addBtn);
 
-            // Close button
             var buttons = new VisualElement();
             buttons.AddToClassList("modal-buttons");
             buttons.style.marginTop = 16;
@@ -96,7 +86,6 @@ namespace TaskCanvas.Editor
             closeBtn.AddToClassList("modal-button-secondary");
             buttons.Add(closeBtn);
 
-            // Close on background click
             RegisterCallback<ClickEvent>(evt =>
             {
                 if (evt.target == this)

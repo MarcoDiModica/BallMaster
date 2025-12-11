@@ -4,9 +4,6 @@ using UnityEngine.UIElements;
 
 namespace TaskCanvas.Editor
 {
-    /// <summary>
-    /// Manages theme switching between light and dark modes.
-    /// </summary>
     public static class ThemeManager
     {
         private const string PREF_KEY = "TaskCanvas_Theme";
@@ -65,13 +62,11 @@ namespace TaskCanvas.Editor
         {
             LoadStyleSheets();
 
-            // Remove old stylesheets
             if (_darkStyleSheet != null && root.styleSheets.Contains(_darkStyleSheet))
                 root.styleSheets.Remove(_darkStyleSheet);
             if (_lightStyleSheet != null && root.styleSheets.Contains(_lightStyleSheet))
                 root.styleSheets.Remove(_lightStyleSheet);
 
-            // Add current theme
             var currentSheet = GetCurrentStyleSheet();
             if (currentSheet != null)
                 root.styleSheets.Add(currentSheet);

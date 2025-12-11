@@ -8,9 +8,6 @@ using UnityEngine.UIElements;
 
 namespace TaskCanvas.Editor
 {
-    /// <summary>
-    /// Popup for creating and editing cards with modular extras panel.
-    /// </summary>
     public class CardEditPopup : VisualElement
     {
         private KanbanCard _card;
@@ -26,7 +23,6 @@ namespace TaskCanvas.Editor
         private ScrollView _assigneesContainer;
         private VisualElement _extrasPanel;
 
-        // Module data
         private bool _hasDueDate;
         private long _dueDate;
 
@@ -63,23 +59,19 @@ namespace TaskCanvas.Editor
             content.style.maxWidth = 600;
             Add(content);
 
-            // Title
             var title = new Label(_isCreateMode ? "Create Card" : "Edit Card");
             title.AddToClassList("modal-title");
             content.Add(title);
 
-            // Main layout: left side + right side (extras)
             var mainLayout = new VisualElement();
             mainLayout.style.flexDirection = FlexDirection.Row;
             content.Add(mainLayout);
 
-            // Left side - main fields
             var leftPanel = new VisualElement();
             leftPanel.style.flexGrow = 1;
             leftPanel.style.marginRight = 16;
             mainLayout.Add(leftPanel);
 
-            // Card Title field
             var titleGroup = new VisualElement();
             titleGroup.AddToClassList("modal-field");
             leftPanel.Add(titleGroup);
@@ -93,7 +85,6 @@ namespace TaskCanvas.Editor
             _titleField.AddToClassList("modal-text-field");
             titleGroup.Add(_titleField);
 
-            // Description field
             var descGroup = new VisualElement();
             descGroup.AddToClassList("modal-field");
             leftPanel.Add(descGroup);
@@ -109,7 +100,6 @@ namespace TaskCanvas.Editor
             _descriptionField.style.minHeight = 50;
             descGroup.Add(_descriptionField);
 
-            // Priority selector
             var priorityGroup = new VisualElement();
             priorityGroup.AddToClassList("modal-field");
             leftPanel.Add(priorityGroup);
@@ -143,7 +133,6 @@ namespace TaskCanvas.Editor
                 _prioritySelector.Add(btn);
             }
 
-            // Tags section with scroll
             var tagsGroup = new VisualElement();
             tagsGroup.AddToClassList("modal-field");
             leftPanel.Add(tagsGroup);
@@ -170,7 +159,6 @@ namespace TaskCanvas.Editor
 
             RefreshTags();
 
-            // Assignees section with scroll
             var assigneesGroup = new VisualElement();
             assigneesGroup.AddToClassList("modal-field");
             leftPanel.Add(assigneesGroup);
@@ -197,7 +185,6 @@ namespace TaskCanvas.Editor
 
             RefreshAssignees();
 
-            // Right side - extras panel
             _extrasPanel = new VisualElement();
             _extrasPanel.style.width = 140;
             _extrasPanel.style.borderLeftWidth = 1;
@@ -210,13 +197,11 @@ namespace TaskCanvas.Editor
             extrasTitle.style.marginBottom = 8;
             _extrasPanel.Add(extrasTitle);
 
-            // Due Date module
             var dueDateBtn = new Button(ToggleDueDate);
             dueDateBtn.text = "📅 Due Date";
             dueDateBtn.AddToClassList("extras-button");
             _extrasPanel.Add(dueDateBtn);
 
-            // Future modules placeholder
             var linkBtn = new Button(() => { });
             linkBtn.text = "🔗 Link";
             linkBtn.AddToClassList("extras-button");
@@ -229,13 +214,11 @@ namespace TaskCanvas.Editor
             checklistBtn.SetEnabled(false);
             _extrasPanel.Add(checklistBtn);
 
-            // Buttons
             var buttons = new VisualElement();
             buttons.AddToClassList("modal-buttons");
             buttons.style.marginTop = 16;
             content.Add(buttons);
 
-            // Delete button (only in edit mode)
             if (!_isCreateMode)
             {
                 var deleteBtn = new Button(DeleteCard);
@@ -261,7 +244,6 @@ namespace TaskCanvas.Editor
             saveBtn.AddToClassList("modal-button-primary");
             buttons.Add(saveBtn);
 
-            // Close on background click
             RegisterCallback<ClickEvent>(evt =>
             {
                 if (evt.target == this)
@@ -343,18 +325,6 @@ namespace TaskCanvas.Editor
 
         private void ShowQuickAddTag()
         {
-            var tagName =
-                EditorUtility.DisplayDialogComplex(
-                    "Quick Add Tag",
-                    "Enter tag name:",
-                    "Add",
-                    "Cancel",
-                    ""
-                ) == 0
-                    ? ""
-                    : "";
-
-            // Use a simple input dialog workaround
             var popup = new QuickInputPopup(
                 "New Tag",
                 "Enter tag name:",
@@ -393,7 +363,6 @@ namespace TaskCanvas.Editor
         private void ToggleDueDate()
         {
             _hasDueDate = !_hasDueDate;
-            // TODO: Implement date picker when needed
             EditorUtility.DisplayDialog(
                 "Coming Soon",
                 "Due date feature will be implemented in the next update.",
@@ -452,9 +421,6 @@ namespace TaskCanvas.Editor
         }
     }
 
-    /// <summary>
-    /// Simple quick input popup for adding tags/assignees inline.
-    /// </summary>
     public class QuickInputPopup : VisualElement
     {
         private TextField _inputField;

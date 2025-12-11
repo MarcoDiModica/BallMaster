@@ -6,10 +6,6 @@ using UnityEngine.UIElements;
 
 namespace TaskCanvas.Editor
 {
-    /// <summary>
-    /// Reusable animation system for UI Toolkit elements.
-    /// Uses EditorApplication.update with real time tracking.
-    /// </summary>
     public static class UIAnimator
     {
         private static List<Animation> _activeAnimations = new List<Animation>();
@@ -52,7 +48,6 @@ namespace TaskCanvas.Editor
                 return;
             }
 
-            // Use real time for accurate animation
             double currentTime = EditorApplication.timeSinceStartup;
             float deltaTime;
 
@@ -66,7 +61,6 @@ namespace TaskCanvas.Editor
             }
             _lastTime = currentTime;
 
-            // Clamp delta to avoid huge jumps
             deltaTime = Mathf.Clamp(deltaTime, 0.001f, 0.1f);
 
             _isUpdating = true;

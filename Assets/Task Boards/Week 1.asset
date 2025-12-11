@@ -18,6 +18,20 @@ MonoBehaviour:
     title: "\U0001F4CB To Do"
     headerColor: {r: 0.4, g: 0.6, b: 0.9, a: 1}
     cards:
+    - id: 0169f464-0572-4a4a-bbc9-4bc128687075
+      title: New Task
+      description: 
+      color: {r: 0.5, g: 0.7, b: 1, a: 1}
+      priority: 0
+      tags: []
+      assigneeIds: []
+      isCompleted: 0
+      createdAt: 1765398033
+      updatedAt: 1765412638
+  - id: 39bf1658-56e4-40c3-9c8c-d88900be5199
+    title: "\U0001F504 In Progress"
+    headerColor: {r: 0.9, g: 0.7, b: 0.3, a: 1}
+    cards:
     - id: b854db7a-4fbb-493f-a677-c6b9f1260bc5
       title: New Task
       description: 
@@ -27,11 +41,31 @@ MonoBehaviour:
       assigneeIds: []
       isCompleted: 0
       createdAt: 1765397214
-      updatedAt: 1765407698
+      updatedAt: 1765412654
+    - id: 490edb88-2041-4b90-ab1f-fb2cd677b160
+      title: New Task
+      description: 
+      color: {r: 0.5, g: 0.7, b: 1, a: 1}
+      priority: 0
+      tags: []
+      assigneeIds: []
+      isCompleted: 0
+      createdAt: 1765397677
+      updatedAt: 1765412923
   - id: d4030868-6d28-43f6-90ad-39b5637749b5
     title: "\u2705 Done"
     headerColor: {r: 0.4, g: 0.8, b: 0.5, a: 1}
     cards:
+    - id: d60b0445-1ce0-45b2-9629-b8cd05257dc3
+      title: New Task
+      description: 
+      color: {r: 0.5, g: 0.7, b: 1, a: 1}
+      priority: 0
+      tags: []
+      assigneeIds: []
+      isCompleted: 0
+      createdAt: 1765398271
+      updatedAt: 1765412449
     - id: 2832e231-d00a-4c82-b11a-79937b421da8
       title: Go to the Bathroom
       description: Just going to the Bathroom
@@ -43,41 +77,7 @@ MonoBehaviour:
       - ac2b10c0-2031-4b65-923f-1a53c3008e73
       isCompleted: 0
       createdAt: 1765397145
-      updatedAt: 1765407675
-    - id: d60b0445-1ce0-45b2-9629-b8cd05257dc3
-      title: New Task
-      description: 
-      color: {r: 0.5, g: 0.7, b: 1, a: 1}
-      priority: 0
-      tags: []
-      assigneeIds: []
-      isCompleted: 0
-      createdAt: 1765398271
-      updatedAt: 1765408230
-  - id: 39bf1658-56e4-40c3-9c8c-d88900be5199
-    title: "\U0001F504 In Progress"
-    headerColor: {r: 0.9, g: 0.7, b: 0.3, a: 1}
-    cards:
-    - id: 490edb88-2041-4b90-ab1f-fb2cd677b160
-      title: New Task
-      description: 
-      color: {r: 0.5, g: 0.7, b: 1, a: 1}
-      priority: 0
-      tags: []
-      assigneeIds: []
-      isCompleted: 0
-      createdAt: 1765397677
-      updatedAt: 1765407663
-    - id: 0169f464-0572-4a4a-bbc9-4bc128687075
-      title: New Task
-      description: 
-      color: {r: 0.5, g: 0.7, b: 1, a: 1}
-      priority: 0
-      tags: []
-      assigneeIds: []
-      isCompleted: 0
-      createdAt: 1765398033
-      updatedAt: 1765406907
+      updatedAt: 1765412517
   assignees:
   - id: ac2b10c0-2031-4b65-923f-1a53c3008e73
     name: Marco Di Modica

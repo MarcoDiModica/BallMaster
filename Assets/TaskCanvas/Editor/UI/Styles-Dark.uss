@@ -1,16 +1,10 @@
-/* TaskCanvas Dark Theme - V2.1 */
+/* TaskCanvas Dark Theme - V2.3 */
 
-/* ============================================
-   ROOT & WINDOW
-   ============================================ */
 .task-canvas-root {
     flex-grow: 1;
     background-color: #1e1e1e;
 }
 
-/* ============================================
-   TOOLBAR
-   ============================================ */
 .toolbar {
     flex-direction: row;
     align-items: center;
@@ -68,9 +62,6 @@
     color: #e0e0e0;
 }
 
-/* ============================================
-   FILTER BAR
-   ============================================ */
 .filter-bar {
     flex-direction: row;
     align-items: center;
@@ -133,16 +124,10 @@
     border-left-width: 3px;
 }
 
-/* ============================================
-   MAIN SCROLL VIEW
-   ============================================ */
 .main-scroll-view {
     flex-grow: 1;
 }
 
-/* ============================================
-   COLUMNS CONTAINER
-   ============================================ */
 .columns-container {
     flex-direction: row;
     flex-grow: 1;
@@ -150,9 +135,6 @@
     min-height: 100%;
 }
 
-/* ============================================
-   COLUMN
-   ============================================ */
 .kanban-column {
     width: 280px;
     min-width: 280px;
@@ -161,7 +143,6 @@
     margin-right: 12px;
     flex-shrink: 0;
     overflow: hidden;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .kanban-column.drop-target {
@@ -180,27 +161,9 @@
 
 .column-header {
     padding: 10px 12px;
-    background-color: #2d2d30;
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
     flex-direction: row;
     align-items: center;
-}
-
-.column-header:hover {
-    background-color: #353539;
-}
-
-.column-drag-handle {
-    flex-direction: row;
-    align-items: center;
-    padding: 4px;
-    margin-right: 4px;
-}
-
-.column-drag-handle:hover {
-    background-color: #3c3c3c;
-    border-radius: 4px;
+    cursor: grab;
 }
 
 .column-title {
@@ -210,6 +173,18 @@
     flex-grow: 1;
 }
 
+.column-title-field {
+    font-size: 14px;
+    -unity-font-style: bold;
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: #0e639c;
+    padding: 2px 4px;
+    margin: -2px 0;
+}
+
 .column-count {
     font-size: 11px;
     color: #888888;
@@ -217,6 +192,15 @@
     border-radius: 10px;
     padding: 2px 8px;
     margin-right: 8px;
+}
+
+.column-edit-button {
+    padding: 4px 6px;
+    border-radius: 4px;
+}
+
+.column-edit-button:hover {
+    background-color: #3c3c3c;
 }
 
 .edit-button {
@@ -245,21 +229,15 @@
 
 .column-add-button {
     margin: 8px;
-    margin-top: 4px;
+    margin-bottom: 12px;
     padding: 8px;
-    background-color: #3c3c3c;
+    background-color: transparent;
     border-radius: 6px;
     border-width: 0;
-    color: #888888;
     -unity-text-align: middle-center;
+    transition: background-color 0.15s ease;
 }
 
-.column-add-button:hover {
-    background-color: #4a4a4a;
-    color: #e0e0e0;
-}
-
-/* Add Column Button */
 .add-column-button {
     width: 200px;
     min-width: 200px;
@@ -280,14 +258,10 @@
     color: #e0e0e0;
 }
 
-/* ============================================
-   CARD DROP ZONES
-   ============================================ */
 .card-drop-zone {
     height: 4px;
     margin: 2px 0;
     border-radius: 2px;
-    transition: height 0.15s ease, background-color 0.15s ease;
 }
 
 .card-drop-zone.drop-zone-active {
@@ -297,25 +271,23 @@
     border-color: #0e639c;
 }
 
-/* ============================================
-   CARD - Updated with thicker border
-   ============================================ */
 .kanban-card {
     background-color: #2d2d30;
     border-radius: 6px;
-    padding: 12px;
+    padding: 10px 12px;
     margin-bottom: 4px;
-    border-left-width: 6px;
+    border-left-width: 4px;
     border-left-color: #4a9eff;
+    border-width: 1px;
+    border-color: transparent;
 }
 
-.kanban-card:hover {
-    background-color: #363639;
+.kanban-card.card-hover {
+    border-color: #0e639c;
 }
 
 .kanban-card.dragging {
     opacity: 0.9;
-    background-color: #404045;
 }
 
 .kanban-card.dragging-source {
@@ -334,39 +306,33 @@
     border-left-color: #6bcb77;
 }
 
-.card-edit-button {
-    background-color: transparent;
-    border-width: 0;
-    padding: 4px 8px;
-    border-radius: 4px;
-    color: #888888;
-    font-size: 16px;
-    position: absolute;
-    top: 4px;
-    right: 4px;
+.card-buttons-container {
     opacity: 0;
+    flex-direction: row;
 }
 
-.kanban-card:hover .card-edit-button {
-    opacity: 1;
+.card-action-button {
+    padding: 2px 4px;
+    margin-left: 4px;
+    cursor: link;
+    border-radius: 3px;
 }
 
-.card-edit-button:hover {
-    color: #ffffff;
+.card-action-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
 .card-title {
     font-size: 13px;
     color: #e0e0e0;
     -unity-font-style: bold;
-    margin-bottom: 6px;
     white-space: normal;
 }
 
 .card-description {
     font-size: 11px;
     color: #888888;
-    margin-bottom: 8px;
+    margin-top: 4px;
     white-space: normal;
 }
 
@@ -374,6 +340,7 @@
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
+    margin-top: 6px;
 }
 
 .card-tag {
@@ -404,9 +371,6 @@
     align-items: center;
 }
 
-/* ============================================
-   MODAL / POPUP
-   ============================================ */
 .modal-overlay {
     position: absolute;
     left: 0;
@@ -511,9 +475,6 @@
     background-color: #6a4040;
 }
 
-/* ============================================
-   EXTRAS PANEL (Card Modules)
-   ============================================ */
 .extras-button {
     background-color: #3c3c3c;
     border-radius: 4px;
@@ -533,9 +494,6 @@
     opacity: 0.5;
 }
 
-/* ============================================
-   EMPTY STATE
-   ============================================ */
 .empty-state {
     flex-grow: 1;
     justify-content: center;
@@ -550,9 +508,6 @@
     margin-bottom: 16px;
 }
 
-/* ============================================
-   PRIORITY SELECTOR
-   ============================================ */
 .priority-selector {
     flex-direction: row;
     margin-top: 4px;
@@ -587,9 +542,6 @@
     background-color: #5a2a2a;
 }
 
-/* ============================================
-   DRAG PLACEHOLDERS
-   ============================================ */
 .drag-placeholder {
     background-color: #3c3c3c;
     border-radius: 6px;
@@ -617,7 +569,7 @@
 }
 
 .check-label {
-    font-size: 18px;
+    font-size: 16px;
     color: #6bcb77;
     -unity-text-align: middle-center;
     width: 20px;
@@ -642,6 +594,10 @@
     margin-right: 6px;
 }
 
-.drag-ghost {
+.drag-ghost-card {
     opacity: 0.9;
+}
+
+.drag-ghost-column {
+    opacity: 0.85;
 }

@@ -6,9 +6,6 @@ using UnityEngine.UIElements;
 
 namespace TaskCanvas.Editor
 {
-    /// <summary>
-    /// Popup for creating and editing columns.
-    /// </summary>
     public class ColumnEditPopup : VisualElement
     {
         private KanbanColumn _column;
@@ -41,12 +38,10 @@ namespace TaskCanvas.Editor
             content.AddToClassList("modal-content");
             Add(content);
 
-            // Title
             var title = new Label(_isCreateMode ? "Create Column" : "Edit Column");
             title.AddToClassList("modal-title");
             content.Add(title);
 
-            // Column Title field
             var titleGroup = new VisualElement();
             titleGroup.AddToClassList("modal-field");
             content.Add(titleGroup);
@@ -60,7 +55,6 @@ namespace TaskCanvas.Editor
             _titleField.AddToClassList("modal-text-field");
             titleGroup.Add(_titleField);
 
-            // Color field
             var colorGroup = new VisualElement();
             colorGroup.AddToClassList("modal-field");
             content.Add(colorGroup);
@@ -73,12 +67,10 @@ namespace TaskCanvas.Editor
             _colorField.value = _column.headerColor;
             colorGroup.Add(_colorField);
 
-            // Buttons
             var buttons = new VisualElement();
             buttons.AddToClassList("modal-buttons");
             content.Add(buttons);
 
-            // Delete button (only in edit mode)
             if (!_isCreateMode)
             {
                 var deleteBtn = new Button(DeleteColumn);
@@ -104,7 +96,6 @@ namespace TaskCanvas.Editor
             saveBtn.AddToClassList("modal-button-primary");
             buttons.Add(saveBtn);
 
-            // Close on background click
             RegisterCallback<ClickEvent>(evt =>
             {
                 if (evt.target == this)

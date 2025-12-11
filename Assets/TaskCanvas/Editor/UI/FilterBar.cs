@@ -5,10 +5,6 @@ using UnityEngine.UIElements;
 
 namespace TaskCanvas.Editor
 {
-    /// <summary>
-    /// Filter bar component for filtering cards by tags and assignees.
-    /// Uses inline wrapping instead of scrollbars.
-    /// </summary>
     public class FilterBar : VisualElement
     {
         public event Action OnFiltersChanged;
@@ -38,7 +34,6 @@ namespace TaskCanvas.Editor
             style.flexWrap = Wrap.Wrap;
             style.alignItems = Align.Center;
 
-            // Tags section
             var tagsLabel = new Label("Tags:");
             tagsLabel.AddToClassList("filter-label");
             Add(tagsLabel);
@@ -49,12 +44,10 @@ namespace TaskCanvas.Editor
             _tagsContainer.style.flexShrink = 1;
             Add(_tagsContainer);
 
-            // Separator
             var separator = new VisualElement();
             separator.style.width = 16;
             Add(separator);
 
-            // Assignees section
             var assigneesLabel = new Label("Assignees:");
             assigneesLabel.AddToClassList("filter-label");
             Add(assigneesLabel);
@@ -65,7 +58,6 @@ namespace TaskCanvas.Editor
             _assigneesContainer.style.flexShrink = 1;
             Add(_assigneesContainer);
 
-            // Clear button
             _clearButton = new Button(ClearFilters);
             _clearButton.text = "✕ Clear";
             _clearButton.AddToClassList("filter-chip");
@@ -91,7 +83,6 @@ namespace TaskCanvas.Editor
             if (_board == null || _board.allTags == null)
                 return;
 
-            // Show max 8 tags inline, rest in a "+N more" chip
             int maxVisible = 8;
             int count = 0;
 
@@ -126,7 +117,6 @@ namespace TaskCanvas.Editor
             if (_board == null || _board.assignees == null)
                 return;
 
-            // Show max 6 assignees inline
             int maxVisible = 6;
             int count = 0;
 
@@ -159,7 +149,6 @@ namespace TaskCanvas.Editor
         private void ToggleExpand()
         {
             _isExpanded = !_isExpanded;
-            // For now just refresh - in expanded mode show all
             RefreshFilters();
         }
 

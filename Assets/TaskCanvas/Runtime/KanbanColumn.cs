@@ -4,9 +4,6 @@ using UnityEngine;
 
 namespace TaskCanvas
 {
-    /// <summary>
-    /// Represents a column in the Kanban board (e.g., To Do, In Progress, Done).
-    /// </summary>
     [Serializable]
     public class KanbanColumn
     {

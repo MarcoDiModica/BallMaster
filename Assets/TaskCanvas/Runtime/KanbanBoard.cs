@@ -3,10 +3,6 @@ using UnityEngine;
 
 namespace TaskCanvas
 {
-    /// <summary>
-    /// ScriptableObject representing a Kanban board.
-    /// Create via: Right-click in Project > Create > TaskCanvas > Board
-    /// </summary>
     [CreateAssetMenu(fileName = "New Kanban Board", menuName = "TaskCanvas/Board", order = 1)]
     public class KanbanBoard : ScriptableObject
     {
@@ -65,7 +61,6 @@ namespace TaskCanvas
             KanbanCard card = null;
             KanbanColumn sourceColumn = null;
 
-            // Find the card and its source column
             foreach (var column in columns)
             {
                 card = column.cards.Find(c => c.id == cardId);
@@ -79,15 +74,12 @@ namespace TaskCanvas
             if (card == null || sourceColumn == null)
                 return false;
 
-            // Find target column
             var targetColumn = columns.Find(c => c.id == targetColumnId);
             if (targetColumn == null)
                 return false;
 
-            // Remove from source
             sourceColumn.cards.Remove(card);
 
-            // Add to target
             if (targetIndex < 0 || targetIndex >= targetColumn.cards.Count)
             {
                 targetColumn.cards.Add(card);

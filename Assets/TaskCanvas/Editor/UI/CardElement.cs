@@ -5,13 +5,11 @@ using UnityEngine.UIElements;
 
 namespace TaskCanvas.Editor
 {
-    /// <summary>
-    /// Visual Element for displaying a Kanban card with animated hover-reveal completion.
-    /// </summary>
     public class CardElement : VisualElement
     {
         public event Action<CardElement> OnEditClicked;
         public event Action<CardElement> OnCompletionToggled;
+        public event Action<CardElement> OnDeleteClicked;
 
         public KanbanCard Card { get; private set; }
         public KanbanBoard Board { get; private set; }
@@ -24,17 +22,17 @@ namespace TaskCanvas.Editor
         private Label _titleLabel;
         private Label _descriptionLabel;
         private VisualElement _footer;
+        private VisualElement _buttonsContainer;
         private VisualElement _editButton;
+        private VisualElement _deleteButton;
         private bool _potentialDrag;
         private bool _didDrag;
         private Vector2 _dragStartPos;
         private bool _isHovered;
-        private bool _isCheckHovered;
 
-        // Animation durations
-        private const float HOVER_DURATION = 0.8f;
-        private const float CHECK_DURATION = 0.4f;
-        private const UIAnimator.EaseType SMOOTH_EASE = UIAnimator.EaseType.EaseOutCubic;
+        private const float HOVER_DURATION = 0.4f;
+        private const float CHECK_DURATION = 0.3f;
+        private const UIAnimator.EaseType SMOOTH_EASE = UIAnimator.EaseType.EaseOut;
 
         public CardElement(KanbanCard card, KanbanBoard board, string columnId)
         {
@@ -55,13 +53,11 @@ namespace TaskCanvas.Editor
 
         private void BuildUI()
         {
-            // Main horizontal container with vertical centering
             _mainRow = new VisualElement();
             _mainRow.style.flexDirection = FlexDirection.Row;
-            _mainRow.style.alignItems = Align.Center;
+            _mainRow.style.alignItems = Align.FlexStart;
             Add(_mainRow);
 
-            // Check container (starts at width 0, animates on hover) - smaller offset
             _checkContainer = new VisualElement();
             _checkContainer.AddToClassList("check-container");
             _checkContainer.style.width = Card.isCompleted ? 20 : 0;
@@ -71,48 +67,22 @@ namespace TaskCanvas.Editor
             _checkContainer.RegisterCallback<MouseDownEvent>(OnCheckClick);
             _mainRow.Add(_checkContainer);
 
-            // Check label - bigger
             _checkLabel = new Label(Card.isCompleted ? "✓" : "○");
             _checkLabel.AddToClassList("check-label");
             _checkLabel.style.opacity = Card.isCompleted ? 1 : 0;
             _checkContainer.Add(_checkLabel);
 
-            // Content wrapper
             _contentWrapper = new VisualElement();
             _contentWrapper.AddToClassList("card-content");
             _contentWrapper.style.flexGrow = 1;
-            _contentWrapper.style.justifyContent = Justify.Center;
             _mainRow.Add(_contentWrapper);
 
-            // Header with title
-            var headerRow = new VisualElement();
-            headerRow.style.flexDirection = FlexDirection.Row;
-            headerRow.style.alignItems = Align.Center;
-            _contentWrapper.Add(headerRow);
-
-            // Title
             _titleLabel = new Label(Card.title);
             _titleLabel.AddToClassList("card-title");
-            _titleLabel.style.flexGrow = 1;
-            _titleLabel.style.marginBottom = 0;
             if (Card.isCompleted)
                 _titleLabel.AddToClassList("completed-text");
-            headerRow.Add(_titleLabel);
+            _contentWrapper.Add(_titleLabel);
 
-            // Edit button - use VisualElement with label to avoid Button cursor
-            _editButton = new VisualElement();
-            _editButton.AddToClassList("card-edit-button");
-            var editLabel = new Label("•••");
-            editLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
-            _editButton.Add(editLabel);
-            _editButton.RegisterCallback<MouseDownEvent>(evt =>
-            {
-                evt.StopPropagation();
-                OnEditClicked?.Invoke(this);
-            });
-            Add(_editButton);
-
-            // Description
             if (!string.IsNullOrEmpty(Card.description))
             {
                 _descriptionLabel = new Label(TruncateText(Card.description, 80));
@@ -122,23 +92,89 @@ namespace TaskCanvas.Editor
                 _contentWrapper.Add(_descriptionLabel);
             }
 
-            // Footer with tags and assignees
             _footer = new VisualElement();
             _footer.AddToClassList("card-footer");
             _contentWrapper.Add(_footer);
 
             RefreshFooter();
+
+            _buttonsContainer = new VisualElement();
+            _buttonsContainer.AddToClassList("card-buttons-container");
+            _buttonsContainer.style.position = Position.Absolute;
+            _buttonsContainer.style.top = 6;
+            _buttonsContainer.style.right = 6;
+            _buttonsContainer.style.flexDirection = FlexDirection.Row;
+            _buttonsContainer.style.alignItems = Align.Center;
+            _buttonsContainer.style.opacity = 0;
+            Add(_buttonsContainer);
+
+            _deleteButton = new VisualElement();
+            _deleteButton.AddToClassList("card-action-button");
+            _deleteButton.style.width = 20;
+            _deleteButton.style.height = 20;
+            _deleteButton.style.justifyContent = Justify.Center;
+            _deleteButton.style.alignItems = Align.Center;
+            var deleteLabel = new Label("×");
+            deleteLabel.style.fontSize = 16;
+            deleteLabel.style.color = new Color(0.5f, 0.5f, 0.5f);
+            deleteLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+            deleteLabel.style.marginTop = -2;
+            _deleteButton.Add(deleteLabel);
+            _deleteButton.RegisterCallback<MouseDownEvent>(evt =>
+            {
+                evt.StopPropagation();
+                if (
+                    EditorUtility.DisplayDialog(
+                        "Delete Card",
+                        $"Delete '{Card.title}'?",
+                        "Delete",
+                        "Cancel"
+                    )
+                )
+                {
+                    OnDeleteClicked?.Invoke(this);
+                }
+            });
+            _deleteButton.RegisterCallback<MouseEnterEvent>(evt =>
+                deleteLabel.style.color = new Color(1f, 0.4f, 0.4f)
+            );
+            _deleteButton.RegisterCallback<MouseLeaveEvent>(evt =>
+                deleteLabel.style.color = new Color(0.5f, 0.5f, 0.5f)
+            );
+            _buttonsContainer.Add(_deleteButton);
+
+            _editButton = new VisualElement();
+            _editButton.AddToClassList("card-action-button");
+            _editButton.style.width = 20;
+            _editButton.style.height = 20;
+            _editButton.style.justifyContent = Justify.Center;
+            _editButton.style.alignItems = Align.Center;
+            var editLabel = new Label("✎");
+            editLabel.style.fontSize = 12;
+            editLabel.style.color = new Color(0.5f, 0.5f, 0.5f);
+            editLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+            _editButton.Add(editLabel);
+            _editButton.RegisterCallback<MouseDownEvent>(evt =>
+            {
+                evt.StopPropagation();
+                OnEditClicked?.Invoke(this);
+            });
+            _editButton.RegisterCallback<MouseEnterEvent>(evt =>
+                editLabel.style.color = new Color(1f, 1f, 1f)
+            );
+            _editButton.RegisterCallback<MouseLeaveEvent>(evt =>
+                editLabel.style.color = new Color(0.5f, 0.5f, 0.5f)
+            );
+            _buttonsContainer.Add(_editButton);
         }
 
         private void OnCheckHoverEnter()
         {
-            _isCheckHovered = true;
             UIAnimator.AnimateScale(_checkLabel, 1.2f, 0.15f, UIAnimator.EaseType.EaseOut);
         }
 
         private void OnCheckHoverLeave()
         {
-            _isCheckHovered = false;
             UIAnimator.AnimateScale(_checkLabel, 1f, 0.15f, UIAnimator.EaseType.EaseOut);
         }
 
@@ -184,9 +220,11 @@ namespace TaskCanvas.Editor
                 return;
             _isHovered = true;
 
-            // Smaller offset - just 20px width + 4px margin = 24px total
+            AddToClassList("card-hover");
+
             UIAnimator.AnimateWidth(_checkContainer, 20, HOVER_DURATION, SMOOTH_EASE);
             UIAnimator.AnimateMarginRight(_checkContainer, 4, HOVER_DURATION, SMOOTH_EASE);
+            UIAnimator.AnimateOpacity(_buttonsContainer, 1f, 0.2f, UIAnimator.EaseType.EaseOut);
 
             if (!Card.isCompleted)
             {
@@ -205,6 +243,10 @@ namespace TaskCanvas.Editor
             if (!_isHovered)
                 return;
             _isHovered = false;
+
+            RemoveFromClassList("card-hover");
+
+            UIAnimator.AnimateOpacity(_buttonsContainer, 0f, 0.2f, UIAnimator.EaseType.EaseOut);
 
             if (Card.isCompleted)
                 return;
@@ -295,7 +337,7 @@ namespace TaskCanvas.Editor
 
         private void OnMouseDown(MouseDownEvent evt)
         {
-            if (_editButton.Contains(evt.target as VisualElement))
+            if (_buttonsContainer.Contains(evt.target as VisualElement))
                 return;
             if (_checkContainer.Contains(evt.target as VisualElement))
                 return;
@@ -316,17 +358,10 @@ namespace TaskCanvas.Editor
 
             var delta = evt.mousePosition - _dragStartPos;
 
-            if (delta.magnitude > 8 && !DragDropManager.IsDragging)
+            if (delta.magnitude > 5 && !DragDropManager.IsDragging)
             {
                 _didDrag = true;
-                DragDropManager.StartCardDrag(
-                    this,
-                    Card.id,
-                    ColumnId,
-                    evt.mousePosition,
-                    Card,
-                    Board
-                );
+                DragDropManager.StartCardDrag(this, Card.id, ColumnId, _dragStartPos, Card, Board);
                 _potentialDrag = false;
             }
         }

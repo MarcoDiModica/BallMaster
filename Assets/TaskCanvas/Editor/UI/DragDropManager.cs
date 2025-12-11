@@ -6,10 +6,6 @@ using UnityEngine.UIElements;
 
 namespace TaskCanvas.Editor
 {
-    /// <summary>
-    /// Manages drag and drop with smooth animations.
-    /// Ghost follows mouse with smoothing and tilt.
-    /// </summary>
     public static class DragDropManager
     {
         public static bool IsDragging { get; private set; }
@@ -32,15 +28,15 @@ namespace TaskCanvas.Editor
         private static Vector2 _dragOffset;
         private static float _ghostWidth;
         private static float _ghostHeight;
+        private static int _originalCardIndex;
 
-        // Smooth drag variables
         private static Vector2 _targetGhostPos;
         private static Vector2 _currentGhostPos;
         private static float _currentTilt;
         private static float _targetTilt;
         private static Vector2 _lastMousePos;
         private static double _lastDragTime = -1;
-        private const float SMOOTH_SPEED = 12f; // Higher = faster, less lag
+        private const float SMOOTH_SPEED = 30f;
 
         public static void Initialize(
             VisualElement root,
@@ -67,7 +63,6 @@ namespace TaskCanvas.Editor
                 return;
             }
 
-            // Calculate delta time
             double currentTime = EditorApplication.timeSinceStartup;
             float deltaTime;
             if (_lastDragTime < 0)
@@ -81,25 +76,22 @@ namespace TaskCanvas.Editor
             _lastDragTime = currentTime;
             deltaTime = Mathf.Clamp(deltaTime, 0.001f, 0.1f);
 
-            // Smooth position interpolation with deltaTime
             float t = 1f - Mathf.Exp(-SMOOTH_SPEED * deltaTime);
             _currentGhostPos = Vector2.Lerp(_currentGhostPos, _targetGhostPos, t);
             _ghostElement.style.left = _currentGhostPos.x;
             _ghostElement.style.top = _currentGhostPos.y;
 
-            // Smooth tilt interpolation
             _currentTilt = Mathf.Lerp(_currentTilt, _targetTilt, t);
             _ghostElement.style.rotate = new Rotate(_currentTilt);
 
-            // Decay tilt back to 0
-            _targetTilt *= 0.92f;
+            _targetTilt *= 0.9f;
         }
 
         public static void StartCardDrag(
             VisualElement cardElement,
             string cardId,
             string columnId,
-            Vector2 mousePos,
+            Vector2 grabPosition,
             KanbanCard card,
             KanbanBoard board
         )
@@ -117,28 +109,26 @@ namespace TaskCanvas.Editor
             _ghostWidth = cardElement.resolvedStyle.width;
             _ghostHeight = cardElement.resolvedStyle.height;
 
-            // Calculate drag offset from grab point
             var cardRect = cardElement.worldBound;
-            _dragOffset = new Vector2(mousePos.x - cardRect.x, mousePos.y - cardRect.y);
+            _dragOffset = new Vector2(grabPosition.x - cardRect.x, cardRect.height * 0.5f);
 
-            // Initialize smooth drag position
-            _targetGhostPos = new Vector2(cardRect.x, cardRect.y);
-            _currentGhostPos = _targetGhostPos;
+            _currentGhostPos = new Vector2(cardRect.x, cardRect.y);
+            _targetGhostPos = _currentGhostPos;
             _currentTilt = 0;
             _targetTilt = 0;
-            _lastMousePos = mousePos;
-
-            CreateCardGhost(cardElement, mousePos, card, board);
-            CreateCardPlaceholder();
-
-            var parent = cardElement.parent;
-            var idx = parent.IndexOf(cardElement);
-            parent.Insert(idx, _placeholder);
+            _lastMousePos = grabPosition;
 
             cardElement.style.display = DisplayStyle.None;
 
+            CreateCardGhost(card, board);
+            CreateCardPlaceholder();
+
+            var parent = cardElement.parent;
+            _originalCardIndex = parent.IndexOf(cardElement);
+            parent.Insert(_originalCardIndex, _placeholder);
+
             _currentPlaceholderColumnId = columnId;
-            _currentPlaceholderCardIndex = idx;
+            _currentPlaceholderCardIndex = _originalCardIndex;
         }
 
         public static void StartColumnDrag(
@@ -164,13 +154,13 @@ namespace TaskCanvas.Editor
             var colRect = columnElement.worldBound;
             _dragOffset = new Vector2(mousePos.x - colRect.x, mousePos.y - colRect.y);
 
-            _targetGhostPos = new Vector2(colRect.x, colRect.y);
-            _currentGhostPos = _targetGhostPos;
+            _currentGhostPos = new Vector2(colRect.x, colRect.y);
+            _targetGhostPos = _currentGhostPos;
             _currentTilt = 0;
             _targetTilt = 0;
             _lastMousePos = mousePos;
 
-            CreateColumnGhost(columnElement, mousePos, columnTitle);
+            CreateColumnGhost(columnTitle);
             CreateColumnPlaceholder();
 
             if (_columnsContainer != null)
@@ -182,130 +172,79 @@ namespace TaskCanvas.Editor
             _currentPlaceholderColumnIndex = columnIndex;
         }
 
-        private static void CreateCardGhost(
-            VisualElement source,
-            Vector2 mousePos,
-            KanbanCard card,
-            KanbanBoard board
-        )
+        private static void CreateCardGhost(KanbanCard card, KanbanBoard board)
         {
             _ghostElement = new VisualElement();
-            _ghostElement.AddToClassList("kanban-card");
-            _ghostElement.AddToClassList("drag-ghost");
+            _ghostElement.AddToClassList("drag-ghost-card");
             _ghostElement.style.position = Position.Absolute;
             _ghostElement.style.width = _ghostWidth;
             _ghostElement.pickingMode = PickingMode.Ignore;
-            _ghostElement.style.opacity = 0;
+            _ghostElement.style.opacity = 0.9f;
+            _ghostElement.style.backgroundColor = new Color(0.18f, 0.18f, 0.19f);
+            _ghostElement.style.borderTopLeftRadius = 6;
+            _ghostElement.style.borderTopRightRadius = 6;
+            _ghostElement.style.borderBottomLeftRadius = 6;
+            _ghostElement.style.borderBottomRightRadius = 6;
+            _ghostElement.style.paddingTop = 10;
+            _ghostElement.style.paddingBottom = 10;
+            _ghostElement.style.paddingLeft = 12;
+            _ghostElement.style.paddingRight = 12;
+            _ghostElement.style.borderLeftWidth = 4;
 
-            // Start animation - scale up and fade in
-            _ghostElement.style.scale = new Scale(new Vector2(0.95f, 0.95f));
-
-            // Priority border
             switch (card.priority)
             {
                 case 0:
-                    _ghostElement.AddToClassList("priority-low");
+                    _ghostElement.style.borderLeftColor = new Color(0.42f, 0.80f, 0.47f);
                     break;
                 case 1:
-                    _ghostElement.AddToClassList("priority-medium");
+                    _ghostElement.style.borderLeftColor = new Color(1f, 0.85f, 0.24f);
                     break;
                 case 2:
-                    _ghostElement.AddToClassList("priority-high");
+                    _ghostElement.style.borderLeftColor = new Color(1f, 0.42f, 0.42f);
+                    break;
+                default:
+                    _ghostElement.style.borderLeftColor = new Color(0.29f, 0.62f, 1f);
                     break;
             }
 
-            // Main row for check + content
             var mainRow = new VisualElement();
             mainRow.style.flexDirection = FlexDirection.Row;
             mainRow.style.alignItems = Align.Center;
             _ghostElement.Add(mainRow);
 
-            // Completed check if applicable
             if (card.isCompleted)
             {
-                var checkContainer = new VisualElement();
-                checkContainer.AddToClassList("check-container");
-                checkContainer.style.width = 20;
-                checkContainer.style.marginRight = 4;
-                mainRow.Add(checkContainer);
-
                 var checkLabel = new Label("✓");
-                checkLabel.AddToClassList("check-label");
-                checkLabel.style.opacity = 1;
-                checkContainer.Add(checkLabel);
+                checkLabel.style.fontSize = 14;
+                checkLabel.style.color = new Color(0.42f, 0.80f, 0.47f);
+                checkLabel.style.marginRight = 6;
+                mainRow.Add(checkLabel);
             }
 
-            // Content wrapper
             var contentWrapper = new VisualElement();
             contentWrapper.style.flexGrow = 1;
             mainRow.Add(contentWrapper);
 
-            // Title
             var title = new Label(card.title);
-            title.AddToClassList("card-title");
+            title.style.fontSize = 13;
+            title.style.color = new Color(0.88f, 0.88f, 0.88f);
+            title.style.unityFontStyleAndWeight = FontStyle.Bold;
             if (card.isCompleted)
-                title.AddToClassList("completed-text");
+                title.style.opacity = 0.5f;
             contentWrapper.Add(title);
 
-            // Description
             if (!string.IsNullOrEmpty(card.description))
             {
-                var desc = new Label(TruncateText(card.description, 60));
-                desc.AddToClassList("card-description");
+                var desc = new Label(TruncateText(card.description, 50));
+                desc.style.fontSize = 11;
+                desc.style.color = new Color(0.53f, 0.53f, 0.53f);
+                desc.style.marginTop = 2;
                 contentWrapper.Add(desc);
             }
 
-            // Footer with tags and assignees
-            var footer = new VisualElement();
-            footer.AddToClassList("card-footer");
-            contentWrapper.Add(footer);
-
-            // Tags
-            int tagCount = 0;
-            foreach (var tag in card.tags)
-            {
-                if (tagCount >= 2)
-                    break;
-                var tagLabel = new Label($"#{tag}");
-                tagLabel.AddToClassList("card-tag");
-                footer.Add(tagLabel);
-                tagCount++;
-            }
-
-            // Assignees
-            int assigneeCount = 0;
-            foreach (var assigneeId in card.assigneeIds)
-            {
-                if (assigneeCount >= 3)
-                    break;
-                var assignee = board.GetAssigneeById(assigneeId);
-                if (assignee != null)
-                {
-                    var assigneeEl = new VisualElement();
-                    assigneeEl.AddToClassList("card-assignee");
-                    assigneeEl.style.backgroundColor = assignee.color;
-
-                    var initial = new Label(
-                        assignee.name.Length > 0 ? assignee.name[0].ToString().ToUpper() : "?"
-                    );
-                    initial.style.color = Color.white;
-                    initial.style.unityTextAlign = TextAnchor.MiddleCenter;
-                    initial.style.fontSize = 10;
-                    assigneeEl.Add(initial);
-
-                    footer.Add(assigneeEl);
-                    assigneeCount++;
-                }
-            }
-
-            // Set initial position
             _ghostElement.style.left = _currentGhostPos.x;
             _ghostElement.style.top = _currentGhostPos.y;
             _root.Add(_ghostElement);
-
-            // Animate ghost appearance
-            UIAnimator.AnimateOpacity(_ghostElement, 0.95f, 0.2f, UIAnimator.EaseType.EaseOut);
-            UIAnimator.AnimateScale(_ghostElement, 1.02f, 0.15f, UIAnimator.EaseType.EaseOut);
         }
 
         private static string TruncateText(string text, int maxLength)
@@ -317,28 +256,28 @@ namespace TaskCanvas.Editor
             return text.Substring(0, maxLength - 3) + "...";
         }
 
-        private static void CreateColumnGhost(
-            VisualElement source,
-            Vector2 mousePos,
-            string columnTitle
-        )
+        private static void CreateColumnGhost(string columnTitle)
         {
             _ghostElement = new VisualElement();
-            _ghostElement.AddToClassList("kanban-column");
-            _ghostElement.AddToClassList("drag-ghost");
+            _ghostElement.AddToClassList("drag-ghost-column");
             _ghostElement.style.position = Position.Absolute;
             _ghostElement.style.width = _ghostWidth;
-            _ghostElement.style.height = 100;
+            _ghostElement.style.height = 80;
             _ghostElement.pickingMode = PickingMode.Ignore;
-            _ghostElement.style.opacity = 0.9f;
-
-            var header = new VisualElement();
-            header.AddToClassList("column-header");
-            _ghostElement.Add(header);
+            _ghostElement.style.opacity = 0.85f;
+            _ghostElement.style.backgroundColor = new Color(0.15f, 0.15f, 0.15f);
+            _ghostElement.style.borderTopLeftRadius = 8;
+            _ghostElement.style.borderTopRightRadius = 8;
+            _ghostElement.style.borderBottomLeftRadius = 8;
+            _ghostElement.style.borderBottomRightRadius = 8;
+            _ghostElement.style.paddingTop = 10;
+            _ghostElement.style.paddingLeft = 12;
 
             var title = new Label(columnTitle);
-            title.AddToClassList("column-title");
-            header.Add(title);
+            title.style.fontSize = 14;
+            title.style.color = new Color(0.88f, 0.88f, 0.88f);
+            title.style.unityFontStyleAndWeight = FontStyle.Bold;
+            _ghostElement.Add(title);
 
             _ghostElement.style.left = _currentGhostPos.x;
             _ghostElement.style.top = _currentGhostPos.y;
@@ -368,15 +307,13 @@ namespace TaskCanvas.Editor
             if (!IsDragging || _placeholder == null)
                 return;
 
-            // Calculate target position from current mouse pos and original grab offset
             _targetGhostPos = new Vector2(
                 evt.mousePosition.x - _dragOffset.x,
                 evt.mousePosition.y - _dragOffset.y
             );
 
-            // Calculate tilt based on horizontal mouse velocity
             float deltaX = evt.mousePosition.x - _lastMousePos.x;
-            _targetTilt = Mathf.Clamp(deltaX * 0.5f, -8f, 8f);
+            _targetTilt = Mathf.Clamp(deltaX * 0.3f, -5f, 5f);
             _lastMousePos = evt.mousePosition;
 
             if (DraggedCardId != null)
@@ -394,6 +331,9 @@ namespace TaskCanvas.Editor
             if (_columnsContainer == null)
                 return;
 
+            VisualElement targetColumn = null;
+            string targetColumnId = null;
+
             foreach (var child in _columnsContainer.Children())
             {
                 if (!child.ClassListContains("kanban-column"))
@@ -404,65 +344,84 @@ namespace TaskCanvas.Editor
                 var colRect = child.worldBound;
                 if (mousePos.x >= colRect.x && mousePos.x <= colRect.xMax)
                 {
-                    var columnId = child.userData as string;
-                    var cardsContainer = child.Q<VisualElement>(className: "column-cards");
-
-                    if (cardsContainer == null)
-                        continue;
-
-                    int insertIdx = 0;
-                    int visibleCardCount = 0;
-                    bool foundPosition = false;
-                    float lastCardBottom = 0;
-
-                    foreach (var cardChild in cardsContainer.Children())
-                    {
-                        if (cardChild == _placeholder)
-                            continue;
-                        if (cardChild.style.display == DisplayStyle.None)
-                            continue;
-
-                        if (cardChild.ClassListContains("kanban-card"))
-                        {
-                            visibleCardCount++;
-
-                            var cardRect = cardChild.worldBound;
-                            lastCardBottom = cardRect.yMax;
-
-                            if (!foundPosition)
-                            {
-                                float threshold = cardRect.y + cardRect.height * 0.4f;
-                                if (mousePos.y < threshold)
-                                {
-                                    foundPosition = true;
-                                }
-                                else
-                                {
-                                    insertIdx++;
-                                }
-                            }
-                        }
-                    }
-
-                    // If mouse is below all cards or no position found, insert at end
-                    if (!foundPosition || mousePos.y > lastCardBottom)
-                    {
-                        insertIdx = visibleCardCount;
-                    }
-
-                    if (
-                        columnId != _currentPlaceholderColumnId
-                        || insertIdx != _currentPlaceholderCardIndex
-                    )
-                    {
-                        _placeholder.RemoveFromHierarchy();
-                        int actualIdx = Mathf.Clamp(insertIdx, 0, cardsContainer.childCount);
-                        cardsContainer.Insert(actualIdx, _placeholder);
-                        _currentPlaceholderColumnId = columnId;
-                        _currentPlaceholderCardIndex = insertIdx;
-                    }
+                    targetColumn = child;
+                    targetColumnId = child.userData as string;
                     break;
                 }
+            }
+
+            if (targetColumn == null || targetColumnId == null)
+                return;
+
+            var cardsContainer = targetColumn.Q<VisualElement>(className: "column-cards");
+            if (cardsContainer == null)
+                return;
+
+            int insertIdx = 0;
+            bool foundPosition = false;
+
+            var children = new List<VisualElement>();
+            foreach (var c in cardsContainer.Children())
+            {
+                if (
+                    c != _placeholder
+                    && c.ClassListContains("kanban-card")
+                    && c.style.display != DisplayStyle.None
+                )
+                {
+                    children.Add(c);
+                }
+            }
+
+            for (int i = 0; i < children.Count; i++)
+            {
+                var cardChild = children[i];
+                var cardRect = cardChild.worldBound;
+                float cardMidY = cardRect.y + cardRect.height * 0.5f;
+
+                if (mousePos.y < cardMidY)
+                {
+                    insertIdx = i;
+                    foundPosition = true;
+                    break;
+                }
+            }
+
+            if (!foundPosition)
+            {
+                insertIdx = children.Count;
+            }
+
+            if (
+                targetColumnId != _currentPlaceholderColumnId
+                || insertIdx != _currentPlaceholderCardIndex
+            )
+            {
+                _placeholder.RemoveFromHierarchy();
+
+                int actualInsertIndex = 0;
+                int cardsSeen = 0;
+                foreach (var c in cardsContainer.Children())
+                {
+                    if (c == _placeholder)
+                        continue;
+                    if (cardsSeen == insertIdx)
+                        break;
+                    if (c.ClassListContains("kanban-card") && c.style.display != DisplayStyle.None)
+                    {
+                        cardsSeen++;
+                    }
+                    actualInsertIndex++;
+                }
+
+                if (cardsSeen < insertIdx)
+                {
+                    actualInsertIndex = cardsContainer.childCount;
+                }
+
+                cardsContainer.Insert(actualInsertIndex, _placeholder);
+                _currentPlaceholderColumnId = targetColumnId;
+                _currentPlaceholderCardIndex = insertIdx;
             }
         }
 
@@ -529,7 +488,7 @@ namespace TaskCanvas.Editor
                     actualIdx++;
                 }
 
-                actualIdx = Mathf.Clamp(actualIdx, 0, _columnsContainer.childCount - 1);
+                actualIdx = Mathf.Clamp(actualIdx, 0, _columnsContainer.childCount);
                 _columnsContainer.Insert(actualIdx, _placeholder);
                 _currentPlaceholderColumnIndex = insertIdx;
             }
@@ -561,6 +520,7 @@ namespace TaskCanvas.Editor
             if (_draggedElement != null)
             {
                 _draggedElement.style.display = DisplayStyle.Flex;
+                _draggedElement.style.opacity = 1f;
             }
 
             if (_ghostElement != null)
@@ -580,10 +540,11 @@ namespace TaskCanvas.Editor
             SourceColumnId = null;
             DraggedColumnIndex = -1;
             _draggedElement = null;
-            _columnsContainer = null; // Clear cache so it's refreshed next drag
+            _columnsContainer = null;
             _currentPlaceholderColumnIndex = -1;
             _currentPlaceholderCardIndex = -1;
             _currentPlaceholderColumnId = null;
+            _originalCardIndex = -1;
         }
     }
 }

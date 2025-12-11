@@ -3,9 +3,6 @@ using UnityEngine;
 
 namespace TaskCanvas
 {
-    /// <summary>
-    /// Represents a person or team that can be assigned to cards.
-    /// </summary>
     [Serializable]
     public class Assignee
     {

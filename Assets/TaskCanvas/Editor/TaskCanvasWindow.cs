@@ -8,10 +8,6 @@ using UnityEngine.UIElements;
 
 namespace TaskCanvas.Editor
 {
-    /// <summary>
-    /// Main TaskCanvas window for managing Kanban boards.
-    /// Open via: Window > TaskCanvas
-    /// </summary>
     public class TaskCanvasWindow : EditorWindow
     {
         private KanbanBoard _currentBoard;
@@ -31,7 +27,7 @@ namespace TaskCanvas.Editor
         public static void ShowWindow()
         {
             var window = GetWindow<TaskCanvasWindow>();
-            window.titleContent = new GUIContent("📋 TaskCanvas");
+            window.titleContent = new GUIContent("Task Canvas");
             window.minSize = new Vector2(600, 400);
         }
 
@@ -53,32 +49,25 @@ namespace TaskCanvas.Editor
             _root.Clear();
             _root.AddToClassList("task-canvas-root");
 
-            // Apply theme
             ThemeManager.ApplyTheme(_root);
 
-            // Initialize drag-drop manager
             DragDropManager.Initialize(_root, OnCardDropped, OnColumnReorder, RefreshColumns);
 
-            // Build toolbar
             BuildToolbar();
 
-            // Build filter bar
             _filterBar = new FilterBar(_currentBoard);
             _filterBar.OnFiltersChanged += RefreshColumns;
             _root.Add(_filterBar);
 
-            // Main scroll view for columns
             _mainScrollView = new ScrollView(ScrollViewMode.Horizontal);
             _mainScrollView.AddToClassList("main-scroll-view");
             _mainScrollView.style.flexGrow = 1;
             _root.Add(_mainScrollView);
 
-            // Columns container inside scroll
             _columnsContainer = new VisualElement();
             _columnsContainer.AddToClassList("columns-container");
             _mainScrollView.Add(_columnsContainer);
 
-            // Empty state
             _emptyState = new VisualElement();
             _emptyState.AddToClassList("empty-state");
             var emptyText = new Label(
@@ -103,12 +92,10 @@ namespace TaskCanvas.Editor
             _toolbar.AddToClassList("toolbar");
             _root.Add(_toolbar);
 
-            // Title
             var title = new Label("📋 TaskCanvas");
             title.AddToClassList("toolbar-title");
             _toolbar.Add(title);
 
-            // Board dropdown
             _boardDropdown = new DropdownField();
             _boardDropdown.AddToClassList("board-dropdown");
             _boardDropdown.RegisterValueChangedCallback(evt =>
@@ -116,30 +103,25 @@ namespace TaskCanvas.Editor
             );
             _toolbar.Add(_boardDropdown);
 
-            // New Board button
             var newBoardButton = new Button(CreateNewBoard);
             newBoardButton.text = "+ Board";
             newBoardButton.AddToClassList("toolbar-button");
             _toolbar.Add(newBoardButton);
 
-            // New Assignee button
             var addAssigneeButton = new Button(ShowAddAssigneePopup);
             addAssigneeButton.text = "+ Assignee";
             addAssigneeButton.AddToClassList("toolbar-button");
             _toolbar.Add(addAssigneeButton);
 
-            // New Tag button
             var addTagButton = new Button(ShowAddTagPopup);
             addTagButton.text = "+ Tag";
             addTagButton.AddToClassList("toolbar-button");
             _toolbar.Add(addTagButton);
 
-            // Spacer
             var spacer = new VisualElement();
             spacer.style.flexGrow = 1;
             _toolbar.Add(spacer);
 
-            // Theme toggle
             _themeToggle = new Button(ToggleTheme);
             _themeToggle.text = ThemeManager.GetThemeIcon();
             _themeToggle.AddToClassList("theme-toggle");
@@ -271,7 +253,6 @@ namespace TaskCanvas.Editor
                 _columnElements.Add(columnElement);
             }
 
-            // Add "Add Column" button
             var addColumnBtn = new Button(ShowAddColumnPopup);
             addColumnBtn.text = "+ Add Column";
             addColumnBtn.AddToClassList("add-column-button");
@@ -473,9 +454,6 @@ namespace TaskCanvas.Editor
         }
     }
 
-    /// <summary>
-    /// Popup for creating a new board with name input.
-    /// </summary>
     public class BoardCreatePopup : VisualElement
     {
         private TextField _nameField;
