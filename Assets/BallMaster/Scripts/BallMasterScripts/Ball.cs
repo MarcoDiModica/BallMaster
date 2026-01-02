@@ -278,7 +278,7 @@ public class Ball : MonoBehaviour
                 {
                     if (ballManager != null)
                     {
-                        ballManager.OnBallHitPlayer(player);
+                        ballManager.OnBallHitPlayer(player, ownerPlayerId);
                     }
                 }
             }

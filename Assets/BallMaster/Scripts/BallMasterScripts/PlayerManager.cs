@@ -83,6 +83,11 @@ public class PlayerManager : MonoBehaviour
         if (netComp != null) netComp.Initialize(isLocal);
 
         players[playerId] = controller;
+
+        if (LeaderboardManager.Instance != null)
+        {
+            LeaderboardManager.Instance.RegisterPlayer(playerId);
+        }
         
         if (networkManager.isHost && replicationServer != null)
         {

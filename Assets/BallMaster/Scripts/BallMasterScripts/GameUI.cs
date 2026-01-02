@@ -67,9 +67,8 @@ public class GameUI : MonoBehaviour
         }
 
         if (
-            Keyboard.current.pKey.wasPressedThisFrame
-            || Keyboard.current.escapeKey.wasPressedThisFrame
-            || Gamepad.current.startButton.wasPressedThisFrame
+            (Keyboard.current != null && (Keyboard.current.pKey.wasPressedThisFrame || Keyboard.current.escapeKey.wasPressedThisFrame))
+            || (Gamepad.current != null && Gamepad.current.startButton.wasPressedThisFrame)
         )
         {
             TogglePause();

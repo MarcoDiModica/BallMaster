@@ -134,28 +134,31 @@ public class BallManager : MonoBehaviour
             netObj.MarkDirty();
     }
 
-    public void OnBallHitPlayer(PlayerController player)
+    public void OnBallHitPlayer(PlayerController player, string killerId = "")
     {
         if (networkManager != null && networkManager.isHost)
         {
             NetworkObject playerNetObj = player.GetComponent<NetworkObject>();
+            string victimId = playerNetObj != null ? playerNetObj.objectId : "";
+
+            if (LeaderboardManager.Instance != null && !string.IsNullOrEmpty(killerId) && !string.IsNullOrEmpty(victimId))
+            {
+                LeaderboardManager.Instance.RegisterKill(killerId, victimId);
+            }
+
             if (playerNetObj != null && playerNetObj.objectId.StartsWith("Player_"))
             {
-                // Is a client
                 PlayerManager pm = FindFirstObjectByType<PlayerManager>();
                 if (pm != null && pm.spawnPoints.Length > 0)
                 {
                     int randomIndex = Random.Range(0, pm.spawnPoints.Length);
                     Vector3 spawnPos = pm.spawnPoints[randomIndex].position;
-                    // Send command to client
                     networkManager.SendPlayerRespawn(playerNetObj.objectId, spawnPos);
-                    // Also move server representation
                     player.Respawn(spawnPos);
                 }
             }
             else
             {
-                // Is Host or local
                 player.RequestRespawn();
             }
         }
