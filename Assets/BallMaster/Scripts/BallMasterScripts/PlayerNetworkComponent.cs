@@ -18,12 +18,18 @@ public class PlayerNetworkComponent : MonoBehaviour
     private PlayerController playerController;
     private NetworkManager cachedNetworkManager;
     private PlayerManager playerManager;
+    private PlayerAnimator playerAnimator;
     private bool useSnapshotInterpolation = false;
+
+    private Vector3 lastPosition;
+    private bool lastGroundedState = true;
+    private float groundCheckDistance = 0.3f;
 
     void Awake()
     {
         networkObject = GetComponent<NetworkObject>();
         playerController = GetComponent<PlayerController>();
+        playerAnimator = GetComponent<PlayerAnimator>();
         cachedNetworkManager = FindFirstObjectByType<NetworkManager>();
         playerManager = FindFirstObjectByType<PlayerManager>();
 
@@ -75,6 +81,12 @@ public class PlayerNetworkComponent : MonoBehaviour
             PlayerInput input = GetComponent<PlayerInput>();
             if (input != null)
                 input.enabled = false;
+
+            if (playerAnimator != null)
+                playerAnimator.isLocalPlayer = false;
+
+            if (playerController != null && playerController.wallStaminaCanvasGroup != null)
+                playerController.wallStaminaCanvasGroup.gameObject.SetActive(false);
         }
         else
         {
@@ -108,6 +120,9 @@ public class PlayerNetworkComponent : MonoBehaviour
                     }
                 }
             }
+
+            if (playerAnimator != null)
+                playerAnimator.isLocalPlayer = true;
         }
     }
 
@@ -178,5 +193,41 @@ public class PlayerNetworkComponent : MonoBehaviour
                 interpolationSpeed * Time.deltaTime
             );
         }
+
+        UpdateRemoteAnimations();
+    }
+
+    private void UpdateRemoteAnimations()
+    {
+        if (playerAnimator == null)
+            return;
+
+        Vector3 velocity = (transform.position - lastPosition) / Time.deltaTime;
+        float horizontalSpeed = new Vector3(velocity.x, 0, velocity.z).magnitude;
+        bool isSprinting = horizontalSpeed > 6f;
+
+        bool isGrounded = Physics.Raycast(transform.position + Vector3.up * 0.1f, Vector3.down, groundCheckDistance + 0.1f);
+
+        bool isWallRunning = false;
+        bool isWallLeft = false;
+        if (Mathf.Abs(velocity.y) < 0.5f && !isGrounded && horizontalSpeed > 3f)
+        {
+            RaycastHit hit;
+            if (Physics.Raycast(transform.position, -transform.right, out hit, 0.8f))
+            {
+                isWallRunning = true;
+                isWallLeft = true;
+            }
+            else if (Physics.Raycast(transform.position, transform.right, out hit, 0.8f))
+            {
+                isWallRunning = true;
+                isWallLeft = false;
+            }
+        }
+
+        playerAnimator.UpdateAnimations(isGrounded, isWallRunning, isWallLeft, horizontalSpeed, isSprinting);
+
+        lastPosition = transform.position;
+        lastGroundedState = isGrounded;
     }
 }

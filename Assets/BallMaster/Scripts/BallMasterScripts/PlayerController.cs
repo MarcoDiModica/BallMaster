@@ -1,3 +1,4 @@
+using DG.Tweening;
 using UnityEngine;
 
 //se tendria que separar en varios scripts pero la emocion ha podido conmigo
@@ -48,6 +49,17 @@ public class PlayerController : MonoBehaviour
 
     [Header("Wall Run Camera")]
     public float wallRunCameraTilt = 12f;
+
+    [Header("Wall Stamina")]
+    public float maxWallStamina = 100f;
+    public float wallRunStaminaDrain = 10f;
+    public float wallJumpStaminaCost = 15f;
+    public float wallStaminaRegenRate = 30f;
+    public float wallStaminaRegenDelay = 0.5f;
+    public UnityEngine.UI.Slider wallStaminaSlider;
+    public CanvasGroup wallStaminaCanvasGroup;
+    public float sliderFadeDuration = 0.3f;
+    public float sliderValueLerpDuration = 0.15f;
 
     [Header("Slope Settings")]
     public float slopeStickForce = 10f;
@@ -106,6 +118,18 @@ public class PlayerController : MonoBehaviour
     private float lastWallJumpTimeRef = -10f;
     private bool justStoppedSliding = false;
 
+    private float currentWallStamina;
+    private float lastWallUseTime = -10f;
+    private bool isWallFront = false;
+    private Vector3 frontWallNormal = Vector3.zero;
+
+    public float CurrentWallStamina => currentWallStamina;
+    public float MaxWallStamina => maxWallStamina;
+
+    private bool sliderVisible = false;
+    private Tweener sliderFadeTween;
+    private Tweener sliderValueTween;
+
     void Awake()
     {
         controller = GetComponent<CharacterController>();
@@ -121,6 +145,11 @@ public class PlayerController : MonoBehaviour
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+
+        currentWallStamina = maxWallStamina;
+
+        if (wallStaminaCanvasGroup != null)
+            wallStaminaCanvasGroup.alpha = 0f;
     }
 
     void Start()
@@ -280,6 +309,47 @@ public class PlayerController : MonoBehaviour
 
         Vector3 horzVel = new Vector3(velocity.x, 0, velocity.z);
         HandleCameraJuice(currentInput.x, horzVel.magnitude);
+
+        HandleWallStaminaRegen(isGrounded);
+    }
+
+    private void HandleWallStaminaRegen(bool isGrounded)
+    {
+        if (!isWallRunning && (Time.time - lastWallUseTime) > wallStaminaRegenDelay)
+        {
+            currentWallStamina += wallStaminaRegenRate * Time.deltaTime;
+            if (currentWallStamina > maxWallStamina)
+                currentWallStamina = maxWallStamina;
+        }
+
+        bool shouldShowSlider = isWallRunning || isWallFront || (isWallLeft || isWallRight) || currentWallStamina < maxWallStamina;
+
+        if (wallStaminaCanvasGroup != null)
+        {
+            if (shouldShowSlider && !sliderVisible)
+            {
+                sliderVisible = true;
+                sliderFadeTween?.Kill();
+                sliderFadeTween = wallStaminaCanvasGroup.DOFade(1f, sliderFadeDuration).SetEase(Ease.OutQuad);
+            }
+            else if (!shouldShowSlider && sliderVisible)
+            {
+                sliderVisible = false;
+                sliderFadeTween?.Kill();
+                sliderFadeTween = wallStaminaCanvasGroup.DOFade(0f, sliderFadeDuration).SetEase(Ease.InQuad);
+            }
+        }
+
+        if (wallStaminaSlider != null)
+        {
+            wallStaminaSlider.maxValue = maxWallStamina;
+            float targetValue = currentWallStamina;
+            if (Mathf.Abs(wallStaminaSlider.value - targetValue) > 0.01f)
+            {
+                sliderValueTween?.Kill();
+                sliderValueTween = wallStaminaSlider.DOValue(targetValue, sliderValueLerpDuration).SetEase(Ease.OutQuad);
+            }
+        }
     }
 
     private void DetectSlope()
@@ -303,6 +373,9 @@ public class PlayerController : MonoBehaviour
 
     private void DetectWalls()
     {
+        isWallFront = false;
+        frontWallNormal = Vector3.zero;
+
         if (controller.isGrounded)
         {
             isWallLeft = false;
@@ -318,7 +391,8 @@ public class PlayerController : MonoBehaviour
         }
 
         RaycastHit leftHit,
-            rightHit;
+            rightHit,
+            frontHit;
         Vector3 origin = transform.position + Vector3.up * 0.5f;
 
         isWallLeft = Physics.Raycast(
@@ -336,6 +410,12 @@ public class PlayerController : MonoBehaviour
             wallRunLayers
         );
 
+        if (Physics.Raycast(origin, transform.forward, out frontHit, wallDetectionDistance, wallRunLayers))
+        {
+            isWallFront = true;
+            frontWallNormal = frontHit.normal;
+        }
+
         if (isWallLeft)
             wallNormal = leftHit.normal;
         else if (isWallRight)
@@ -350,8 +430,9 @@ public class PlayerController : MonoBehaviour
         bool hasSpeed = new Vector3(velocity.x, 0, velocity.z).magnitude > minWallRunSpeed;
         bool movingForward = currentInput.y > 0.1f;
         bool isFalling = velocity.y < 0;
+        bool hasStamina = currentWallStamina > 0;
 
-        if (!isWallRunning && wallDetected && hasSpeed && movingForward && isFalling)
+        if (!isWallRunning && wallDetected && hasSpeed && movingForward && isFalling && hasStamina)
         {
             bool sameWall = Vector3.Dot(wallNormal, lastWallNormalVector) > 0.9f;
             if (!sameWall)
@@ -375,11 +456,21 @@ public class PlayerController : MonoBehaviour
     {
         isWallRunning = true;
         velocity.y = 0;
+        lastWallUseTime = Time.time;
     }
 
     private void UpdateWallRun()
     {
         lastWallTime = Time.time;
+        lastWallUseTime = Time.time;
+
+        currentWallStamina -= wallRunStaminaDrain * Time.deltaTime;
+        if (currentWallStamina <= 0)
+        {
+            currentWallStamina = 0;
+            StopWallRun();
+            return;
+        }
 
         bool wallLost = !isWallLeft && !isWallRight;
         bool grounded = controller.isGrounded;
@@ -436,17 +527,24 @@ public class PlayerController : MonoBehaviour
     private void HandleJumping(bool isGrounded)
     {
         bool jumpRequested = (Time.time - lastJumpPressedTime) <= jumpBufferTime;
+        bool hasStamina = currentWallStamina >= wallJumpStaminaCost;
 
         if (jumpRequested && !isGrounded)
         {
-            if (isWallRunning)
+            if (isWallFront && hasStamina)
+            {
+                PerformFrontWallJump();
+                return;
+            }
+
+            if (isWallRunning && hasStamina)
             {
                 PerformWallJump();
                 return;
             }
 
             bool inWallCoyote = (Time.time - lastWallTime) <= wallCoyoteTime;
-            if (inWallCoyote && !hasWallJumped)
+            if (inWallCoyote && hasStamina)
             {
                 PerformWallJump();
                 return;
@@ -454,7 +552,7 @@ public class PlayerController : MonoBehaviour
 
             bool wallDetected = isWallLeft || isWallRight;
             bool inWallKickWindow = (Time.time - wallContactTime) <= wallKickWindow;
-            if ((wallDetected || inWallKickWindow) && !hasWallJumped)
+            if ((wallDetected || inWallKickWindow) && hasStamina)
             {
                 PerformWallJump();
                 return;
@@ -494,6 +592,10 @@ public class PlayerController : MonoBehaviour
     {
         StopWallRun();
 
+        currentWallStamina -= wallJumpStaminaCost;
+        if (currentWallStamina < 0) currentWallStamina = 0;
+        lastWallUseTime = Time.time;
+
         lastWallNormalVector = wallNormal;
         lastWallJumpTimeRef = Time.time;
 
@@ -504,7 +606,21 @@ public class PlayerController : MonoBehaviour
         velocity.z = currentHorizontal.z + wallPush.z;
         velocity.y = wallJumpUpForce;
 
-        hasWallJumped = true;
+        lastJumpPressedTime = -1f;
+        isJumping = true;
+    }
+
+    private void PerformFrontWallJump()
+    {
+        currentWallStamina -= wallJumpStaminaCost;
+        if (currentWallStamina < 0) currentWallStamina = 0;
+        lastWallUseTime = Time.time;
+
+        lastWallNormalVector = frontWallNormal;
+        lastWallJumpTimeRef = Time.time;
+
+        velocity.y = wallJumpUpForce;
+
         lastJumpPressedTime = -1f;
         isJumping = true;
     }
