@@ -3,170 +3,137 @@ using UnityEngine;
 
 public class PlayerAnimator : MonoBehaviour
 {
-    [Header("Walk/Run Bounce")]
-    public float walkBounceHeight = 0.03f;
-    public float walkBounceFrequency = 8f;
-    public float runBounceHeight = 0.06f;
-    public float runBounceFrequency = 12f;
+    [Header("Movement Detection")]
+    public Transform rootTransform;
+    public LayerMask groundLayers = ~0;
+    public float groundCheckDistance = 0.4f;
 
-    [Header("Jump Stretch")]
-    public float jumpStretchY = 1.15f;
-    public float jumpSquashXZ = 0.9f;
-    public float jumpAnimDuration = 0.12f;
+    [Header("Movement Lean")]
+    public float leanAngle = 6f;
+    public float leanSmoothing = 0.15f;
 
-    [Header("Land Squash")]
-    public float landSquashY = 0.8f;
-    public float landStretchXZ = 1.15f;
-    public float landAnimDuration = 0.15f;
+    [Header("Walk/Run Squash")]
+    public float squashAmount = 0.03f;
+    public float squashFrequency = 8f;
+    public float squashSmoothing = 0.1f;
 
     [Header("Wall Run Tilt")]
-    public float wallRunTiltAngle = 15f;
-    public float tiltDuration = 0.2f;
+    public float wallTiltAngle = 12f;
+    public float wallTiltSmoothing = 0.15f;
+    public float wallCheckDistance = 0.7f;
 
-    [Header("References")]
-    public Transform visualTransform;
-    public bool isLocalPlayer = false;
-
+    private Vector3 lastRootPosition;
     private Vector3 originalScale;
-    private Vector3 originalLocalPosition;
-    private Quaternion originalLocalRotation;
-    private float bounceTimer = 0f;
-    private Tweener currentScaleTween;
-    private Tweener currentTiltTween;
-    private bool wasGrounded = true;
-    private bool wasWallRunning = false;
+    private Quaternion originalLocalRot;
 
-    void Awake()
+    private float squashPhase;
+    private Vector3 currentScale;
+    private Vector3 targetScale;
+    private Quaternion currentLeanRot;
+    private Quaternion targetLeanRot;
+
+    void Start()
     {
-        if (visualTransform == null)
-            visualTransform = transform;
+        if (rootTransform == null)
+            rootTransform = transform.parent;
+        if (rootTransform == null)
+            rootTransform = transform;
 
-        originalScale = visualTransform.localScale;
-        originalLocalPosition = visualTransform.localPosition;
-        originalLocalRotation = visualTransform.localRotation;
+        lastRootPosition = rootTransform.position;
+        originalScale = transform.localScale;
+        originalLocalRot = transform.localRotation;
+
+        currentScale = originalScale;
+        targetScale = originalScale;
+        currentLeanRot = originalLocalRot;
+        targetLeanRot = originalLocalRot;
     }
 
-    public void UpdateAnimations(bool isGrounded, bool isWallRunning, bool isWallLeft, float horizontalSpeed, bool isSprinting)
+    void LateUpdate()
     {
-        if (isLocalPlayer)
+        if (rootTransform == null) return;
+
+        float dt = Time.deltaTime;
+        if (dt <= 0) return;
+
+        Vector3 velocity = (rootTransform.position - lastRootPosition) / dt;
+        lastRootPosition = rootTransform.position;
+
+        float horizontalSpeed = new Vector3(velocity.x, 0, velocity.z).magnitude;
+        bool isGrounded = CheckGrounded();
+
+        HandleMovementSquash(isGrounded, horizontalSpeed);
+        HandleMovementLean(velocity, isGrounded);
+        HandleWallTilt(isGrounded);
+
+        ApplyTransforms(dt);
+    }
+
+    private bool CheckGrounded()
+    {
+        Vector3 origin = rootTransform.position + Vector3.up * 0.15f;
+        return Physics.Raycast(origin, Vector3.down, groundCheckDistance + 0.15f, groundLayers, QueryTriggerInteraction.Ignore);
+    }
+
+    private void HandleMovementSquash(bool isGrounded, float speed)
+    {
+        if (!isGrounded || speed < 0.5f)
+        {
+            targetScale = originalScale;
+            squashPhase = 0;
             return;
-
-        if (!wasGrounded && isGrounded)
-        {
-            PlayLandSquash();
-        }
-        else if (wasGrounded && !isGrounded && !isWallRunning)
-        {
-            PlayJumpStretch();
         }
 
-        if (!wasWallRunning && isWallRunning)
-        {
-            PlayWallRunTilt(isWallLeft);
-        }
-        else if (wasWallRunning && !isWallRunning)
-        {
-            ResetTilt();
-        }
+        squashPhase += Time.deltaTime * squashFrequency;
+        float sin = Mathf.Sin(squashPhase * Mathf.PI * 2f);
 
-        if (isGrounded && horizontalSpeed > 0.5f)
+        float scaleY = originalScale.y * (1f - sin * squashAmount);
+        float scaleXZ = originalScale.x * (1f + sin * squashAmount * 0.5f);
+        targetScale = new Vector3(scaleXZ, scaleY, scaleXZ);
+    }
+
+    private void HandleMovementLean(Vector3 velocity, bool isGrounded)
+    {
+        if (!isGrounded || velocity.sqrMagnitude < 0.25f)
         {
-            PlayMovementBounce(isSprinting, horizontalSpeed);
-        }
-        else if (!isWallRunning)
-        {
-            ResetBounce();
+            targetLeanRot = originalLocalRot;
+            return;
         }
 
-        wasGrounded = isGrounded;
-        wasWallRunning = isWallRunning;
+        Vector3 localVel = rootTransform.InverseTransformDirection(velocity);
+        float normalizedZ = Mathf.Clamp(localVel.z / 10f, -1f, 1f);
+        float normalizedX = Mathf.Clamp(localVel.x / 10f, -1f, 1f);
+
+        float forwardLean = normalizedZ * leanAngle;
+        float sideLean = normalizedX * leanAngle * 0.5f;
+
+        targetLeanRot = originalLocalRot * Quaternion.Euler(forwardLean, 0, -sideLean);
     }
 
-    private void PlayMovementBounce(bool isSprinting, float speed)
+    private void HandleWallTilt(bool isGrounded)
     {
-        float height = isSprinting ? runBounceHeight : walkBounceHeight;
-        float freq = isSprinting ? runBounceFrequency : walkBounceFrequency;
+        if (isGrounded) return;
 
-        bounceTimer += Time.deltaTime * freq;
-        float bounceOffset = Mathf.Sin(bounceTimer) * height;
+        Vector3 origin = rootTransform.position + Vector3.up * 0.5f;
+        bool wallLeft = Physics.Raycast(origin, -rootTransform.right, wallCheckDistance, groundLayers, QueryTriggerInteraction.Ignore);
+        bool wallRight = Physics.Raycast(origin, rootTransform.right, wallCheckDistance, groundLayers, QueryTriggerInteraction.Ignore);
 
-        Vector3 pos = originalLocalPosition;
-        pos.y += bounceOffset;
-        visualTransform.localPosition = pos;
+        if (wallLeft)
+        {
+            targetLeanRot = originalLocalRot * Quaternion.Euler(0, 0, -wallTiltAngle);
+        }
+        else if (wallRight)
+        {
+            targetLeanRot = originalLocalRot * Quaternion.Euler(0, 0, wallTiltAngle);
+        }
     }
 
-    private void ResetBounce()
+    private void ApplyTransforms(float dt)
     {
-        bounceTimer = 0f;
-        visualTransform.localPosition = Vector3.Lerp(visualTransform.localPosition, originalLocalPosition, Time.deltaTime * 10f);
-    }
+        currentScale = Vector3.Lerp(currentScale, targetScale, dt / squashSmoothing);
+        transform.localScale = currentScale;
 
-    public void PlayJumpStretch()
-    {
-        if (isLocalPlayer) return;
-
-        currentScaleTween?.Kill();
-
-        Vector3 stretchScale = new Vector3(
-            originalScale.x * jumpSquashXZ,
-            originalScale.y * jumpStretchY,
-            originalScale.z * jumpSquashXZ
-        );
-
-        currentScaleTween = visualTransform.DOScale(stretchScale, jumpAnimDuration * 0.5f)
-            .SetEase(Ease.OutQuad)
-            .OnComplete(() =>
-            {
-                currentScaleTween = visualTransform.DOScale(originalScale, jumpAnimDuration * 0.5f)
-                    .SetEase(Ease.InQuad);
-            });
-    }
-
-    public void PlayLandSquash()
-    {
-        if (isLocalPlayer) return;
-
-        currentScaleTween?.Kill();
-
-        Vector3 squashScale = new Vector3(
-            originalScale.x * landStretchXZ,
-            originalScale.y * landSquashY,
-            originalScale.z * landStretchXZ
-        );
-
-        currentScaleTween = visualTransform.DOScale(squashScale, landAnimDuration * 0.4f)
-            .SetEase(Ease.OutQuad)
-            .OnComplete(() =>
-            {
-                currentScaleTween = visualTransform.DOScale(originalScale, landAnimDuration * 0.6f)
-                    .SetEase(Ease.OutBounce);
-            });
-    }
-
-    public void PlayWallRunTilt(bool isWallLeft)
-    {
-        if (isLocalPlayer) return;
-
-        currentTiltTween?.Kill();
-
-        float targetAngle = isWallLeft ? -wallRunTiltAngle : wallRunTiltAngle;
-        Vector3 targetEuler = originalLocalRotation.eulerAngles;
-        targetEuler.z = targetAngle;
-
-        currentTiltTween = visualTransform.DOLocalRotate(targetEuler, tiltDuration).SetEase(Ease.OutQuad);
-    }
-
-    public void ResetTilt()
-    {
-        if (isLocalPlayer) return;
-
-        currentTiltTween?.Kill();
-        currentTiltTween = visualTransform.DOLocalRotateQuaternion(originalLocalRotation, tiltDuration).SetEase(Ease.OutQuad);
-    }
-
-    void OnDestroy()
-    {
-        currentScaleTween?.Kill();
-        currentTiltTween?.Kill();
+        currentLeanRot = Quaternion.Slerp(currentLeanRot, targetLeanRot, dt / leanSmoothing);
+        transform.localRotation = currentLeanRot;
     }
 }
