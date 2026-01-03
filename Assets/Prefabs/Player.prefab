@@ -563,7 +563,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 10, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &8840848769032762233
 CanvasRenderer:
@@ -742,12 +742,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   walkSpeed: 5
   sprintSpeed: 8
-  acceleration: 30
-  deceleration: 40
+  acceleration: 80
+  deceleration: 100
   airControl: 0.8
   jumpForce: 15
   gravity: -39.24
-  slowedSpeed: 6
+  slowedSpeed: 7
   forwardBoost: 30
   slideSpeed: 12
   slideDuration: 0.8
@@ -788,8 +788,8 @@ MonoBehaviour:
   bobFrequency: 10
   bobAmplitude: 0.1
   slideCameraDrop: 0.2
-  baseFov: 80
-  sprintFov: 90
+  baseFov: 90
+  sprintFov: 100
   fovSpeed: 5
   cameraTransform: {fileID: 3501495713854449566}
   ballEquipTransform: {fileID: 4615012381204673833}
@@ -932,7 +932,7 @@ MonoBehaviour:
   m_MinValue: 0
   m_MaxValue: 1
   m_WholeNumbers: 0
-  m_Value: 0
+  m_Value: 1
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -981,8 +981,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.25}
   m_AnchorMax: {x: 1, y: 0.75}
-  m_AnchoredPosition: {x: -5, y: 0}
-  m_SizeDelta: {x: -20, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &8618201539721975886
 GameObject:
