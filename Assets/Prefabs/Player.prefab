@@ -217,13 +217,13 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 119
   groundCheckDistance: 0.3
-  leanAngle: 8
-  leanSmoothing: 0.15
-  squashAmount: 0.03
+  leanAngle: 12
+  leanSmoothing: 0.2
+  squashAmount: 0.2
   squashFrequency: 8
   squashSmoothing: 0.1
   wallTiltAngle: 12
-  wallTiltSmoothing: 0.15
+  wallTiltSmoothing: 0.2
   wallCheckDistance: 0.7
 --- !u!1 &3900076379840644344
 GameObject:
