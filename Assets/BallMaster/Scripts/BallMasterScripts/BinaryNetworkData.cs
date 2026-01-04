@@ -17,6 +17,7 @@ public enum MessageType : byte
     HeartbeatAck,
     BallDrop,
     PlayerRespawn,
+    KillEvent,
 }
 
 public class BallLaunchData
@@ -37,6 +38,14 @@ public class PlayerRespawnData
 {
     public string playerId;
     public Vector3 respawnPosition;
+}
+
+public class KillEventData
+{
+    public string killerId;
+    public string killerName;
+    public string victimId;
+    public string victimName;
 }
 
 public class PlayerTransformData
@@ -253,6 +262,36 @@ public static class NetworkProtocolBinary
             {
                 playerId = reader.ReadString(),
                 respawnPosition = ReadVector3(reader),
+            };
+        }
+    }
+
+    public static byte[] SerializeKillEvent(KillEventData data)
+    {
+        return Serialize(
+            MessageType.KillEvent,
+            (writer) =>
+            {
+                writer.Write(data.killerId);
+                writer.Write(data.killerName);
+                writer.Write(data.victimId);
+                writer.Write(data.victimName);
+            }
+        );
+    }
+
+    public static KillEventData DeserializeKillEvent(byte[] data)
+    {
+        using (MemoryStream stream = new MemoryStream(data))
+        using (BinaryReader reader = new BinaryReader(stream))
+        {
+            reader.ReadByte();
+            return new KillEventData
+            {
+                killerId = reader.ReadString(),
+                killerName = reader.ReadString(),
+                victimId = reader.ReadString(),
+                victimName = reader.ReadString(),
             };
         }
     }

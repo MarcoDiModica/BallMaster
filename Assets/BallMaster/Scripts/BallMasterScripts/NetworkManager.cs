@@ -365,10 +365,13 @@ public class NetworkManager : MonoBehaviour
                 else
                     HandleBallDropUpdate(data);
                 break;
-                break;
             case MessageType.PlayerRespawn:
                 if (!isHost)
                     HandlePlayerRespawn(data);
+                break;
+            case MessageType.KillEvent:
+                if (!isHost)
+                    HandleKillEvent(data);
                 break;
         }
     }
@@ -692,6 +695,36 @@ public class NetworkManager : MonoBehaviour
                         pc.Respawn(respawnData.respawnPosition);
                     }
                 }
+            }
+        });
+    }
+
+    public void SendKillEvent(string killerId, string killerName, string victimId, string victimName)
+    {
+        if (!isHost || !isConnected)
+            return;
+
+        KillEventData killData = new KillEventData
+        {
+            killerId = killerId,
+            killerName = killerName,
+            victimId = victimId,
+            victimName = victimName,
+        };
+
+        byte[] data = NetworkProtocolBinary.SerializeKillEvent(killData);
+        SendToAllClients(data);
+    }
+
+    void HandleKillEvent(byte[] data)
+    {
+        KillEventData killData = NetworkProtocolBinary.DeserializeKillEvent(data);
+
+        ExecuteOnMainThread(() =>
+        {
+            if (LeaderboardManager.Instance != null)
+            {
+                LeaderboardManager.Instance.RegisterKillFromNetwork(killData);
             }
         });
     }

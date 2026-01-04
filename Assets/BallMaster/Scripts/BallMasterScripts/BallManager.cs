@@ -144,6 +144,16 @@ public class BallManager : MonoBehaviour
             if (LeaderboardManager.Instance != null && !string.IsNullOrEmpty(killerId) && !string.IsNullOrEmpty(victimId))
             {
                 LeaderboardManager.Instance.RegisterKill(killerId, victimId);
+
+                var killerStats = LeaderboardManager.Instance.GetPlayerStats(killerId);
+                var victimStats = LeaderboardManager.Instance.GetPlayerStats(victimId);
+                if (killerStats != null && victimStats != null)
+                {
+                    networkManager.SendKillEvent(
+                        killerId, killerStats.playerName,
+                        victimId, victimStats.playerName
+                    );
+                }
             }
 
             if (playerNetObj != null && playerNetObj.objectId.StartsWith("Player_"))

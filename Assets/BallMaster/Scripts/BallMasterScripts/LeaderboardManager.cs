@@ -77,6 +77,28 @@ public class LeaderboardManager : MonoBehaviour
             .ToList();
     }
 
+    public void RegisterKillFromNetwork(KillEventData data)
+    {
+        EnsurePlayerExists(data.killerId, data.killerName);
+        EnsurePlayerExists(data.victimId, data.victimName);
+
+        playerStats[data.killerId].AddKill();
+        playerStats[data.victimId].AddDeath();
+
+        if (KillFeedUI.Instance != null)
+        {
+            KillFeedUI.Instance.AddKillEntry(data.killerName, data.victimName);
+        }
+    }
+
+    private void EnsurePlayerExists(string playerId, string playerName)
+    {
+        if (!playerStats.ContainsKey(playerId))
+        {
+            playerStats[playerId] = new PlayerStats(playerId, playerName);
+        }
+    }
+
     public int GetPlayerCount()
     {
         return playerStats.Count;

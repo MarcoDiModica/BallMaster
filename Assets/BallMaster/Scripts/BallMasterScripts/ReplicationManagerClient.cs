@@ -117,6 +117,11 @@ public class ReplicationManagerClient : MonoBehaviour
                 {
                     pc.Initialize(playerManager);
                 }
+
+                if (LeaderboardManager.Instance != null)
+                {
+                    LeaderboardManager.Instance.RegisterPlayer(packet.networkId);
+                }
             }
 
             RegisterWithSpecificManager(newObj, packet.objectType, packet.networkId);
