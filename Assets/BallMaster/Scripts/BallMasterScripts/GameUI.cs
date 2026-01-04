@@ -20,11 +20,12 @@ public class GameUI : MonoBehaviour
     [SerializeField]
     private NetworkManager networkManager;
 
-    private PlayerController localPlayer;
+    private PlayerInput localPlayerInput;
 
     void Start()
     {
-        networkManager = FindObjectOfType<NetworkManager>();
+        // use find first
+        networkManager = FindFirstObjectByType<NetworkManager>();
 
         backButton.onClick.AddListener(OnBackClicked);
 
@@ -93,25 +94,25 @@ public class GameUI : MonoBehaviour
             Cursor.visible = false;
         }
 
-        if (localPlayer == null)
+        if (localPlayerInput == null)
         {
-            PlayerController[] players = FindObjectsByType<PlayerController>(
+            PlayerInput[] inputs = FindObjectsByType<PlayerInput>(
                 FindObjectsSortMode.None
             );
-            foreach (var player in players)
+            foreach (var input in inputs)
             {
-                PlayerNetworkComponent netComp = player.GetComponent<PlayerNetworkComponent>();
+                PlayerNetworkComponent netComp = input.GetComponent<PlayerNetworkComponent>();
                 if (netComp != null && netComp.IsLocalPlayer)
                 {
-                    localPlayer = player;
+                    localPlayerInput = input;
                     break;
                 }
             }
         }
 
-        if (localPlayer != null)
+        if (localPlayerInput != null)
         {
-            localPlayer.SetPaused(isPaused);
+            localPlayerInput.enabled = !isPaused;
         }
     }
 

@@ -97,7 +97,6 @@ public class PlayerController : MonoBehaviour
     private float lastSlideTime = -10f;
 
     private Ball equippedBall = null;
-    private bool isPaused = false;
     private float xRotation = 0f;
     private Vector2 currentInput;
     private float defaultYPos = 0;
@@ -163,11 +162,6 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    public void SetPaused(bool paused)
-    {
-        isPaused = paused;
-    }
-
     public void Move(Vector2 inputDir)
     {
         currentInput = inputDir;
@@ -180,9 +174,6 @@ public class PlayerController : MonoBehaviour
 
     public void TrySlideOrDash()
     {
-        if (isPaused)
-            return;
-
         if (controller.isGrounded)
         {
             if (!isSliding && Time.time - lastSlideTime > slideCooldown)
@@ -224,9 +215,6 @@ public class PlayerController : MonoBehaviour
 
     public void Look(Vector2 delta)
     {
-        if (isPaused)
-            return;
-
         xRotation -= delta.y;
         xRotation = Mathf.Clamp(xRotation, -90f, 90f);
 
@@ -235,8 +223,6 @@ public class PlayerController : MonoBehaviour
 
     public void Jump()
     {
-        if (isPaused)
-            return;
         lastJumpPressedTime = Time.time;
 
         if (isSliding)
@@ -245,23 +231,20 @@ public class PlayerController : MonoBehaviour
 
     public void TryThrow()
     {
-        if (isPaused || equippedBall == null)
+        if (equippedBall == null)
             return;
         ThrowBall();
     }
 
     public void TryDrop()
     {
-        if (isPaused || equippedBall == null)
+        if (equippedBall == null)
             return;
         DropBall();
     }
 
     void Update()
     {
-        if (isPaused)
-            return;
-
         bool isGrounded = controller.isGrounded;
         DetectSlope();
 
@@ -434,11 +417,7 @@ public class PlayerController : MonoBehaviour
 
         if (!isWallRunning && wallDetected && hasSpeed && movingForward && isFalling && hasStamina)
         {
-            bool sameWall = Vector3.Dot(wallNormal, lastWallNormalVector) > 0.9f;
-            if (!sameWall)
-            {
-                StartWallRun();
-            }
+            StartWallRun();
         }
 
         if (isWallRunning)
