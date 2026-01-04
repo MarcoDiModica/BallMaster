@@ -244,7 +244,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BallAnimator
   visualChild: {fileID: 3010170247814383940}
   ballRenderer: {fileID: 836503767810229408}
-  maxStretch: 1.5
+  maxStretch: 1
   stretchSpeed: 15
   stretchSmoothing: 0.1
   squashAmount: 0.4

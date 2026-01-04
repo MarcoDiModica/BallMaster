@@ -116,6 +116,7 @@ public class PlayerController : MonoBehaviour
     private Vector3 lastWallNormalVector = Vector3.zero;
     private float lastWallJumpTimeRef = -10f;
     private bool justStoppedSliding = false;
+    private Vector3 lastHorizontalPosition;
 
     private float currentWallStamina;
     private float lastWallUseTime = -10f;
@@ -289,6 +290,19 @@ public class PlayerController : MonoBehaviour
             }
             justStoppedSliding = false;
         }
+
+        if (isWallRunning)
+        {
+            Vector3 currentHorizontalPos = new Vector3(posAfter.x, 0, posAfter.z);
+            Vector3 lastHorizontalPos = new Vector3(lastHorizontalPosition.x, 0, lastHorizontalPosition.z);
+            float horizontalMovement = Vector3.Distance(currentHorizontalPos, lastHorizontalPos);
+            
+            if (horizontalMovement < 0.01f)
+            {
+                StopWallRun();
+            }
+        }
+        lastHorizontalPosition = posAfter;
 
         Vector3 horzVel = new Vector3(velocity.x, 0, velocity.z);
         HandleCameraJuice(currentInput.x, horzVel.magnitude);
