@@ -16,13 +16,12 @@ public class Ball : MonoBehaviour
     public string ownerPlayerId = "";
     public float hotSpeed = 20f;
     public int maxBouncesWithoutGravity = 3;
-    public float normalGravity = -9.81f;
+    public float normalGravity = -9.81f; 
     public float equipTransitionDuration = 0.15f;
     public float pickupCooldown = 0.5f;
 
     private Rigidbody rb;
     private NetworkObject networkObject;
-    private BallAnimator animator;
     private Vector3 velocity;
     private int bounceCount = 0;
     private bool isEquipped = false;
@@ -36,7 +35,6 @@ public class Ball : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
         networkObject = GetComponent<NetworkObject>();
-        animator = GetComponent<BallAnimator>();
         currentState = BallState.Cold;
         rb.isKinematic = false;
         rb.useGravity = true;
@@ -55,7 +53,6 @@ public class Ball : MonoBehaviour
 
     public void Launch(Vector3 direction, string launcherId, Vector3? launchPosition = null)
     {
-        animator?.OnLaunch();
         currentState = BallState.Hot;
         ownerPlayerId = launcherId;
         bounceCount = 0;
@@ -163,7 +160,6 @@ public class Ball : MonoBehaviour
     {
         isEquipped = true;
         equipTransform = parent;
-        animator?.OnEquip();
 
         GetComponent<Collider>().enabled = false;
 
@@ -240,9 +236,6 @@ public class Ball : MonoBehaviour
         if (isEquipped)
             return;
 
-        if (collision.contacts.Length > 0)
-            animator?.OnBounce(collision.contacts[0].normal);
-
         if (currentState == BallState.Hot)
         {
             bounceCount++;
@@ -298,7 +291,6 @@ public class Ball : MonoBehaviour
         ownerPlayerId = "";
         rb.isKinematic = false;
         rb.useGravity = true;
-        animator?.OnStateChange(BallState.Cold);
     }
 
     void RespawnBall()

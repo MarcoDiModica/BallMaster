@@ -3,6 +3,8 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
+//hide buttons when join panel is active
+
 public class MenuUI : MonoBehaviour
 {
     [SerializeField]
@@ -42,6 +44,9 @@ public class MenuUI : MonoBehaviour
     void OnJoinClicked()
     {
         joinPanel.SetActive(true);
+        hostButton.gameObject.SetActive(false);
+        joinButton.gameObject.SetActive(false);
+        quitButton.gameObject.SetActive(false);
 
         ipInput.Select();
     }
@@ -63,7 +68,10 @@ public class MenuUI : MonoBehaviour
     void OnCancelClicked()
     {
         joinPanel.SetActive(false);
-
+        hostButton.gameObject.SetActive(true);
+        joinButton.gameObject.SetActive(true);
+        quitButton.gameObject.SetActive(true);
+        
         hostButton.Select();
     }
 
