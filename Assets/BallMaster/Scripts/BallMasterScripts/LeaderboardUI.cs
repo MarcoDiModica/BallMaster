@@ -16,6 +16,7 @@ public class LeaderboardUI : MonoBehaviour
     public TextMeshProUGUI headerNameText;
     public TextMeshProUGUI headerKillsText;
     public TextMeshProUGUI headerDeathsText;
+    public TextMeshProUGUI headerPingText;
 
     private List<GameObject> spawnedRows = new List<GameObject>();
 
@@ -69,6 +70,11 @@ public class LeaderboardUI : MonoBehaviour
                 texts[0].text = stats.playerName;
                 texts[1].text = stats.kills.ToString();
                 texts[2].text = stats.deaths.ToString();
+            }
+
+            if (texts.Length >= 4)
+            {
+                texts[3].text = stats.pingMs.ToString();
             }
 
             spawnedRows.Add(row);

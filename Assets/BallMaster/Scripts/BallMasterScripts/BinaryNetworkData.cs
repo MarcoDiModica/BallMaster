@@ -18,6 +18,14 @@ public enum MessageType : byte
     BallDrop,
     PlayerRespawn,
     KillEvent,
+    Ack,
+    PingUpdate,
+}
+
+public class PingUpdateData
+{
+    public string playerId;
+    public int pingMs;
 }
 
 public class BallLaunchData
@@ -313,6 +321,53 @@ public static class NetworkProtocolBinary
         }
     }
 
+    public static byte[] SerializePingUpdate(PingUpdateData data)
+    {
+        return Serialize(
+            MessageType.PingUpdate,
+            (writer) =>
+            {
+                writer.Write(data.playerId);
+                writer.Write((ushort)data.pingMs);
+            }
+        );
+    }
+
+    public static PingUpdateData DeserializePingUpdate(byte[] data)
+    {
+        using (MemoryStream stream = new MemoryStream(data))
+        using (BinaryReader reader = new BinaryReader(stream))
+        {
+            reader.ReadByte();
+            return new PingUpdateData
+            {
+                playerId = reader.ReadString(),
+                pingMs = reader.ReadUInt16(),
+            };
+        }
+    }
+
+    public static byte[] SerializeAck(ushort sequenceNumber)
+    {
+        return Serialize(
+            MessageType.Ack,
+            (writer) =>
+            {
+                writer.Write(sequenceNumber);
+            }
+        );
+    }
+
+    public static ushort DeserializeAck(byte[] data)
+    {
+        using (MemoryStream stream = new MemoryStream(data))
+        using (BinaryReader reader = new BinaryReader(stream))
+        {
+            reader.ReadByte();
+            return reader.ReadUInt16();
+        }
+    }
+
     private static void WriteVector3(BinaryWriter writer, Vector3 v)
     {
         writer.Write(v.x);
@@ -341,5 +396,66 @@ public static class NetworkProtocolBinary
             reader.ReadSingle(),
             reader.ReadSingle()
         );
+    }
+
+    private static void WriteQuaternionCompressed(BinaryWriter writer, Quaternion q)
+    {
+        float[] components = { q.x, q.y, q.z, q.w };
+        int largestIndex = 0;
+        float largestValue = Mathf.Abs(components[0]);
+
+        for (int i = 1; i < 4; i++)
+        {
+            float absVal = Mathf.Abs(components[i]);
+            if (absVal > largestValue)
+            {
+                largestValue = absVal;
+                largestIndex = i;
+            }
+        }
+
+        float sign = components[largestIndex] >= 0 ? 1f : -1f;
+        byte header = (byte)(largestIndex & 0x03);
+
+        ushort[] encoded = new ushort[3];
+        int idx = 0;
+        for (int i = 0; i < 4; i++)
+        {
+            if (i == largestIndex) continue;
+            float val = components[i] * sign;
+            encoded[idx++] = (ushort)((val + 1f) * 32767.5f);
+        }
+
+        writer.Write(header);
+        writer.Write(encoded[0]);
+        writer.Write(encoded[1]);
+        writer.Write(encoded[2]);
+    }
+
+    private static Quaternion ReadQuaternionCompressed(BinaryReader reader)
+    {
+        byte header = reader.ReadByte();
+        int largestIndex = header & 0x03;
+
+        float[] decoded = new float[3];
+        for (int i = 0; i < 3; i++)
+        {
+            decoded[i] = (reader.ReadUInt16() / 32767.5f) - 1f;
+        }
+
+        float sumSquares = decoded[0] * decoded[0] + decoded[1] * decoded[1] + decoded[2] * decoded[2];
+        float largest = Mathf.Sqrt(1f - sumSquares);
+
+        float[] components = new float[4];
+        int idx = 0;
+        for (int i = 0; i < 4; i++)
+        {
+            if (i == largestIndex)
+                components[i] = largest;
+            else
+                components[i] = decoded[idx++];
+        }
+
+        return new Quaternion(components[0], components[1], components[2], components[3]);
     }
 }

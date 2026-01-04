@@ -10,10 +10,14 @@ public class LeaderboardManager : MonoBehaviour
 
     private static readonly string[] randomNames = new string[]
     {
-        "Shadow", "Phoenix", "Thunder", "Blaze", "Frost",
-        "Storm", "Viper", "Ghost", "Raven", "Wolf",
-        "Dragon", "Titan", "Nova", "Ace", "Hawk",
-        "Ninja", "Rocket", "Turbo", "Flash", "Bolt"
+        "Patricio Estrella", "Bob Esponja", "Calamardo Tentáculos", "Don Cangrejo", "Arenita Mejillas",
+        "Sheldon J. Plankton", "Homero Simpson", "Marge Simpson", "Bart Simpson", "Lisa Simpson",
+        "Ned Flanders", "Montgomery Burns", "Mickey Mouse", "Pato Donald", "Goofy",
+        "Minnie Mouse", "Bugs Bunny", "Pato Lucas", "Piolín", "Silvestre",
+        "Goku", "Vegeta", "Piccolo", "Naruto Uzumaki", "Sasuke Uchiha",
+        "Monkey D. Luffy", "Roronoa Zoro", "Scooby Doo", "Shaggy Rogers", 
+        "Pedro Picapiedra", "Pablo Mármol", "Tom", "Jerry", "Rick Sánchez", 
+        "Morty Smith", "Peter Griffin", "Stewie Griffin", "Brian Griffin"
     };
 
     void Awake()
@@ -106,8 +110,6 @@ public class LeaderboardManager : MonoBehaviour
 
     private string GenerateRandomName()
     {
-        string baseName = randomNames[Random.Range(0, randomNames.Length)];
-        int number = Random.Range(100, 999);
-        return $"{baseName}_{number}";
+        return randomNames[Random.Range(0, randomNames.Length)];
     }
 }

@@ -18,7 +18,12 @@ public class NetworkManager : MonoBehaviour
 
     public bool isHost = false;
     public bool isConnected = false;
+    public bool isWaitingForConnection = false;
     public string lobbyCode = "";
+    public string lastConnectionError = "";
+
+    public event Action OnConnectionSuccess;
+    public event Action<string> OnConnectionFailed;
 
     private static Dictionary<string, string> codeToIPMap = new Dictionary<string, string>();
     private Dictionary<string, IPEndPoint> connectedClients = new Dictionary<string, IPEndPoint>();
@@ -29,11 +34,18 @@ public class NetworkManager : MonoBehaviour
     private bool running = false;
     private IPEndPoint hostEndPoint;
 
-    // Heartbeat system
     private Dictionary<string, float> clientLastHeartbeat = new Dictionary<string, float>();
+    private Dictionary<string, float> clientHeartbeatSentTime = new Dictionary<string, float>();
+    private Dictionary<string, int> clientPingMs = new Dictionary<string, int>();
     private float lastHeartbeatTime;
-    private const float HEARTBEAT_INTERVAL = 2f;
+    private const float HEARTBEAT_INTERVAL = 1f;
     private const float CLIENT_TIMEOUT = 10f;
+    private float clientRttMs = 0f;
+    private float connectionAttemptTime = 0f;
+    private const float CONNECTION_TIMEOUT = 5f;
+    private bool receivedFirstResponse = false;
+    private float lastJoinSendTime = 0f;
+    private const float JOIN_RETRY_INTERVAL = 0.5f;
 
     void Awake()
     {
@@ -99,6 +111,24 @@ public class NetworkManager : MonoBehaviour
                 SendHeartbeatToClients();
                 CheckClientTimeouts();
                 lastHeartbeatTime = Time.time;
+            }
+        }
+
+        if (isWaitingForConnection && !receivedFirstResponse)
+        {
+            if (Time.time - lastJoinSendTime >= JOIN_RETRY_INTERVAL)
+            {
+                SendJoinMessage(currentLobbyCode);
+                lastJoinSendTime = Time.time;
+            }
+
+            if (Time.time - connectionAttemptTime >= CONNECTION_TIMEOUT)
+            {
+                lastConnectionError = "Conexión agotada: el servidor no responde";
+                isWaitingForConnection = false;
+                isConnected = false;
+                OnConnectionFailed?.Invoke(lastConnectionError);
+                ResetClientState();
             }
         }
     }
@@ -198,6 +228,8 @@ public class NetworkManager : MonoBehaviour
     public void JoinHost(string code)
     {
         isHost = false;
+        lastConnectionError = "";
+        receivedFirstResponse = false;
 
         if (isConnected || udpClient != null)
         {
@@ -222,11 +254,16 @@ public class NetworkManager : MonoBehaviour
             StartUDP(0);
 
             currentLobbyCode = code;
-            isConnected = true;
+            isWaitingForConnection = true;
+            connectionAttemptTime = Time.time;
+            
+            SendJoinMessage(code);
+            lastJoinSendTime = Time.time;
         }
         catch (Exception e)
         {
-            Debug.LogError("Error connecting: " + e.Message);
+            lastConnectionError = "Código inválido: " + e.Message;
+            OnConnectionFailed?.Invoke(lastConnectionError);
         }
     }
 
@@ -353,11 +390,11 @@ public class NetworkManager : MonoBehaviour
                 break;
             case MessageType.Heartbeat:
                 if (!isHost)
-                    HandleHeartbeatFromHost();
+                    HandleHeartbeatFromHost(data);
                 break;
             case MessageType.HeartbeatAck:
                 if (isHost)
-                    HandleHeartbeatAck(sender);
+                    HandleHeartbeatAck(sender, data);
                 break;
             case MessageType.BallDrop:
                 if (isHost)
@@ -372,6 +409,10 @@ public class NetworkManager : MonoBehaviour
             case MessageType.KillEvent:
                 if (!isHost)
                     HandleKillEvent(data);
+                break;
+            case MessageType.PingUpdate:
+                if (!isHost)
+                    HandlePingUpdate(data);
                 break;
         }
     }
@@ -433,6 +474,14 @@ public class NetworkManager : MonoBehaviour
 
         ExecuteOnMainThread(() =>
         {
+            if (!receivedFirstResponse)
+            {
+                receivedFirstResponse = true;
+                isConnected = true;
+                isWaitingForConnection = false;
+                OnConnectionSuccess?.Invoke();
+            }
+
             if (playerManager != null)
             {
                 playerManager.ReceiveMyPlayerId(playerId);
@@ -756,8 +805,20 @@ public class NetworkManager : MonoBehaviour
 
     void SendHeartbeatToClients()
     {
-        byte[] data = new byte[] { (byte)MessageType.Heartbeat };
-        SendToAllClients(data);
+        float currentTime = Time.time;
+        foreach (var kvp in connectedClients)
+        {
+            string clientId = kvp.Key;
+            clientHeartbeatSentTime[clientId] = currentTime;
+        }
+        using (var stream = new System.IO.MemoryStream())
+        using (var writer = new System.IO.BinaryWriter(stream))
+        {
+            writer.Write((byte)MessageType.Heartbeat);
+            writer.Write(currentTime);
+            byte[] data = stream.ToArray();
+            SendToAllClients(data);
+        }
     }
 
     void CheckClientTimeouts()
@@ -777,6 +838,8 @@ public class NetworkManager : MonoBehaviour
             connectedClients.Remove(clientId);
             clientIdToEndpoint.Remove(clientId);
             clientLastHeartbeat.Remove(clientId);
+            clientHeartbeatSentTime.Remove(clientId);
+            clientPingMs.Remove(clientId);
 
             ExecuteOnMainThread(() =>
             {
@@ -788,22 +851,90 @@ public class NetworkManager : MonoBehaviour
         }
     }
 
-    void HandleHeartbeatFromHost()
+    void HandleHeartbeatFromHost(byte[] data)
     {
-        byte[] data = new byte[] { (byte)MessageType.HeartbeatAck };
-        SendToHost(data);
+        float sentTime = 0f;
+        using (var stream = new System.IO.MemoryStream(data))
+        using (var reader = new System.IO.BinaryReader(stream))
+        {
+            reader.ReadByte();
+            sentTime = reader.ReadSingle();
+        }
+        using (var stream = new System.IO.MemoryStream())
+        using (var writer = new System.IO.BinaryWriter(stream))
+        {
+            writer.Write((byte)MessageType.HeartbeatAck);
+            writer.Write(sentTime);
+            byte[] ackData = stream.ToArray();
+            SendToHost(ackData);
+        }
     }
 
-    void HandleHeartbeatAck(IPEndPoint sender)
+    void HandleHeartbeatAck(IPEndPoint sender, byte[] data)
     {
         string clientId = sender.ToString();
+        float sentTime = 0f;
+        using (var stream = new System.IO.MemoryStream(data))
+        using (var reader = new System.IO.BinaryReader(stream))
+        {
+            reader.ReadByte();
+            sentTime = reader.ReadSingle();
+        }
         ExecuteOnMainThread(() =>
         {
             if (clientLastHeartbeat.ContainsKey(clientId))
             {
                 clientLastHeartbeat[clientId] = Time.time;
+                float rtt = Time.time - sentTime;
+                int pingMs = Mathf.RoundToInt(rtt * 1000f);
+                clientPingMs[clientId] = pingMs;
+                BroadcastPingUpdate(clientId, pingMs);
+                UpdateLeaderboardPing(clientId, pingMs);
             }
         });
+    }
+
+    void BroadcastPingUpdate(string clientId, int pingMs)
+    {
+        string playerId = "Player_" + clientId;
+        PingUpdateData pingData = new PingUpdateData { playerId = playerId, pingMs = pingMs };
+        byte[] data = NetworkProtocolBinary.SerializePingUpdate(pingData);
+        SendToAllClients(data);
+    }
+
+    void UpdateLeaderboardPing(string clientId, int pingMs)
+    {
+        string playerId = "Player_" + clientId;
+        if (LeaderboardManager.Instance != null)
+        {
+            var stats = LeaderboardManager.Instance.GetPlayerStats(playerId);
+            if (stats != null)
+                stats.UpdatePing(pingMs);
+        }
+    }
+
+    void HandlePingUpdate(byte[] data)
+    {
+        PingUpdateData pingData = NetworkProtocolBinary.DeserializePingUpdate(data);
+        ExecuteOnMainThread(() =>
+        {
+            if (LeaderboardManager.Instance != null)
+            {
+                var stats = LeaderboardManager.Instance.GetPlayerStats(pingData.playerId);
+                if (stats != null)
+                    stats.UpdatePing(pingData.pingMs);
+            }
+        });
+    }
+
+    public int GetClientPing(string clientId)
+    {
+        return clientPingMs.ContainsKey(clientId) ? clientPingMs[clientId] : 0;
+    }
+
+    public float GetMyPing()
+    {
+        return clientRttMs;
     }
 
     #endregion

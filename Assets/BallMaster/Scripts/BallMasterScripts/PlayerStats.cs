@@ -7,6 +7,7 @@ public class PlayerStats
     public string playerName;
     public int kills;
     public int deaths;
+    public int pingMs;
 
     public float KDRatio => deaths == 0 ? kills : (float)kills / deaths;
     public int Score => kills - deaths;
@@ -17,6 +18,7 @@ public class PlayerStats
         playerName = name;
         kills = 0;
         deaths = 0;
+        pingMs = 0;
     }
 
     public void AddKill()
@@ -27,5 +29,10 @@ public class PlayerStats
     public void AddDeath()
     {
         deaths++;
+    }
+
+    public void UpdatePing(int ms)
+    {
+        pingMs = ms;
     }
 }

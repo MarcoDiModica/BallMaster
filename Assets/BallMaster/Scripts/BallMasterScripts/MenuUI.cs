@@ -3,8 +3,6 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-//hide buttons when join panel is active
-
 public class MenuUI : MonoBehaviour
 {
     [SerializeField]
@@ -20,11 +18,15 @@ public class MenuUI : MonoBehaviour
     public Button connectButton;
     public Button cancelButton;
     public Button quitButton;
+    public TextMeshProUGUI errorText;
 
     void Start()
     {
         if (joinPanel != null)
             joinPanel.SetActive(false);
+
+        if (errorText != null)
+            errorText.text = "";
 
         hostButton.onClick.AddListener(OnHostClicked);
         joinButton.onClick.AddListener(OnJoinClicked);
@@ -32,7 +34,22 @@ public class MenuUI : MonoBehaviour
         cancelButton.onClick.AddListener(OnCancelClicked);
         quitButton.onClick.AddListener(OnQuitClicked);
 
+        if (networkManager != null)
+        {
+            networkManager.OnConnectionSuccess += OnConnectionSuccess;
+            networkManager.OnConnectionFailed += OnConnectionFailed;
+        }
+
         hostButton.Select();
+    }
+
+    void OnDestroy()
+    {
+        if (networkManager != null)
+        {
+            networkManager.OnConnectionSuccess -= OnConnectionSuccess;
+            networkManager.OnConnectionFailed -= OnConnectionFailed;
+        }
     }
 
     void OnHostClicked()
@@ -48,6 +65,9 @@ public class MenuUI : MonoBehaviour
         joinButton.gameObject.SetActive(false);
         quitButton.gameObject.SetActive(false);
 
+        if (errorText != null)
+            errorText.text = "";
+
         ipInput.Select();
     }
 
@@ -57,12 +77,29 @@ public class MenuUI : MonoBehaviour
 
         if (string.IsNullOrEmpty(code))
         {
-            Debug.Log("Ingresa un código válido (ej: 5KY87S)");
+            if (errorText != null)
+                errorText.text = "Ingresa un código válido";
             return;
         }
 
+        if (errorText != null)
+            errorText.text = "Conectando...";
+
+        connectButton.interactable = false;
         networkManager.JoinHost(code);
+    }
+
+    void OnConnectionSuccess()
+    {
         SceneManager.LoadScene("Map_1");
+    }
+
+    void OnConnectionFailed(string error)
+    {
+        if (errorText != null)
+            errorText.text = error;
+
+        connectButton.interactable = true;
     }
 
     void OnCancelClicked()
@@ -71,6 +108,11 @@ public class MenuUI : MonoBehaviour
         hostButton.gameObject.SetActive(true);
         joinButton.gameObject.SetActive(true);
         quitButton.gameObject.SetActive(true);
+
+        connectButton.interactable = true;
+
+        if (errorText != null)
+            errorText.text = "";
         
         hostButton.Select();
     }
@@ -84,3 +126,4 @@ public class MenuUI : MonoBehaviour
 #endif
     }
 }
+

@@ -141,6 +141,9 @@ public class BallManager : MonoBehaviour
             NetworkObject playerNetObj = player.GetComponent<NetworkObject>();
             string victimId = playerNetObj != null ? playerNetObj.objectId : "";
 
+            if (!ValidateHitWithLagCompensation(killerId, victimId, player.transform.position))
+                return;
+
             if (LeaderboardManager.Instance != null && !string.IsNullOrEmpty(killerId) && !string.IsNullOrEmpty(victimId))
             {
                 LeaderboardManager.Instance.RegisterKill(killerId, victimId);
@@ -172,6 +175,31 @@ public class BallManager : MonoBehaviour
                 player.RequestRespawn();
             }
         }
+    }
+
+    bool ValidateHitWithLagCompensation(string shooterId, string victimId, Vector3 currentVictimPosition)
+    {
+        if (LagCompensationManager.Instance == null)
+            return true;
+
+        if (string.IsNullOrEmpty(shooterId))
+            return true;
+
+        string clientId = shooterId.Replace("Player_", "");
+        int shooterPing = networkManager.GetClientPing(clientId);
+
+        if (shooterPing <= 0)
+            return true;
+
+        Vector3 historicalPosition = LagCompensationManager.Instance.GetPlayerPositionAtTime(
+            victimId,
+            LagCompensationManager.Instance.ServerTime - (shooterPing / 1000f)
+        );
+
+        float tolerance = 3f;
+        float distance = Vector3.Distance(currentVictimPosition, historicalPosition);
+
+        return distance <= tolerance;
     }
 
     public void EquipBallNetworked(string ballId, string playerId)
