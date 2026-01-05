@@ -3,8 +3,6 @@ using UnityEngine;
 
 public class LagCompensationManager : MonoBehaviour
 {
-    public static LagCompensationManager Instance { get; private set; }
-
     private NetworkManager networkManager;
     private NetworkObjectManager networkObjectManager;
     private ReplicationManagerServer replicationServer;
@@ -15,16 +13,6 @@ public class LagCompensationManager : MonoBehaviour
 
     void Awake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-        }
-        else
-        {
-            Destroy(gameObject);
-            return;
-        }
-
         networkManager = FindFirstObjectByType<NetworkManager>();
         networkObjectManager = FindFirstObjectByType<NetworkObjectManager>();
         replicationServer = FindFirstObjectByType<ReplicationManagerServer>();

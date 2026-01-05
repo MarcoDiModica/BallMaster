@@ -19,11 +19,14 @@ public class LeaderboardUI : MonoBehaviour
     public TextMeshProUGUI headerPingText;
 
     private List<GameObject> spawnedRows = new List<GameObject>();
+    private LeaderboardManager leaderboardManager;
 
     void Start()
     {
         if (leaderboardPanel != null)
             leaderboardPanel.SetActive(false);
+
+        leaderboardManager = FindFirstObjectByType<LeaderboardManager>();
     }
 
     void Update()
@@ -38,9 +41,7 @@ public class LeaderboardUI : MonoBehaviour
             leaderboardPanel.SetActive(shouldShow);
 
             if (shouldShow)
-            {
                 RefreshLeaderboard();
-            }
         }
     }
 
@@ -52,10 +53,10 @@ public class LeaderboardUI : MonoBehaviour
         }
         spawnedRows.Clear();
 
-        if (LeaderboardManager.Instance == null)
+        if (leaderboardManager == null)
             return;
 
-        List<PlayerStats> allStats = LeaderboardManager.Instance.GetAllStatsSorted();
+        var allStats = leaderboardManager.GetAllStatsSorted();
 
         for (int i = 0; i < allStats.Count; i++)
         {

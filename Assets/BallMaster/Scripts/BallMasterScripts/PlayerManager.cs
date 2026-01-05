@@ -9,6 +9,7 @@ public class PlayerManager : MonoBehaviour
     [SerializeField] private NetworkObjectManager networkObjectManager;
 
     private ReplicationManagerServer replicationServer;
+    private LeaderboardManager leaderboardManager;
 
     public GameObject playerPrefab;
     public Transform[] spawnPoints;
@@ -25,6 +26,7 @@ public class PlayerManager : MonoBehaviour
         {
             networkManager.RegisterPlayerManager(this);
             replicationServer = FindFirstObjectByType<ReplicationManagerServer>(); 
+            leaderboardManager = FindFirstObjectByType<LeaderboardManager>(); 
 
             if (networkManager.isHost)
             {
@@ -84,9 +86,9 @@ public class PlayerManager : MonoBehaviour
 
         players[playerId] = controller;
 
-        if (LeaderboardManager.Instance != null)
+        if (leaderboardManager != null)
         {
-            LeaderboardManager.Instance.RegisterPlayer(playerId);
+            leaderboardManager.RegisterPlayer(playerId);
         }
         
         if (networkManager.isHost && replicationServer != null)

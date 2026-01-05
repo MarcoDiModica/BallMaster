@@ -12,6 +12,7 @@ public class NetworkManager : MonoBehaviour
     private NetworkObjectManager networkObjectManager;
     private ReplicationManagerServer replicationServer;
     private ReplicationManagerClient replicationClient;
+    private LeaderboardManager leaderboardManager;
 
     [Header("Config")]
     public int port = 4567;
@@ -58,6 +59,11 @@ public class NetworkManager : MonoBehaviour
 
         DontDestroyOnLoad(gameObject);
     }
+    
+    void Start()
+    {
+        leaderboardManager = FindFirstObjectByType<LeaderboardManager>();
+    }
 
     public void RegisterPlayerManager(PlayerManager pm)
     {
@@ -82,9 +88,19 @@ public class NetworkManager : MonoBehaviour
     public void RegisterReplicationClient(ReplicationManagerClient rc)
     {
         replicationClient = rc;
+        
+        // Process buffered packets
+        while (bufferedReplicationPackets.Count > 0)
+        {
+            byte[] data = bufferedReplicationPackets.Dequeue();
+            replicationClient.ProcessReplicationPackets(data);
+        }
     }
 
     private readonly Queue<Action> mainThreadActions = new Queue<Action>();
+    
+    // Packet buffering for Replication
+    private Queue<byte[]> bufferedReplicationPackets = new Queue<byte[]>();
 
     public void ExecuteOnMainThread(Action action)
     {
@@ -264,6 +280,7 @@ public class NetworkManager : MonoBehaviour
         {
             lastConnectionError = "Código inválido: " + e.Message;
             OnConnectionFailed?.Invoke(lastConnectionError);
+            ResetClientState();
         }
     }
 
@@ -771,9 +788,9 @@ public class NetworkManager : MonoBehaviour
 
         ExecuteOnMainThread(() =>
         {
-            if (LeaderboardManager.Instance != null)
+            if (leaderboardManager != null)
             {
-                LeaderboardManager.Instance.RegisterKillFromNetwork(killData);
+                leaderboardManager.RegisterKillFromNetwork(killData);
             }
         });
     }
@@ -785,6 +802,11 @@ public class NetworkManager : MonoBehaviour
             if (replicationClient != null)
             {
                 replicationClient.ProcessReplicationPackets(data);
+            }
+            else
+            {
+                // Buffer packets if client is not ready (e.g. scene loading)
+                bufferedReplicationPackets.Enqueue(data);
             }
         });
     }
@@ -905,9 +927,9 @@ public class NetworkManager : MonoBehaviour
     void UpdateLeaderboardPing(string clientId, int pingMs)
     {
         string playerId = "Player_" + clientId;
-        if (LeaderboardManager.Instance != null)
+        if (leaderboardManager != null)
         {
-            var stats = LeaderboardManager.Instance.GetPlayerStats(playerId);
+            var stats = leaderboardManager.GetPlayerStats(playerId);
             if (stats != null)
                 stats.UpdatePing(pingMs);
         }
@@ -918,9 +940,9 @@ public class NetworkManager : MonoBehaviour
         PingUpdateData pingData = NetworkProtocolBinary.DeserializePingUpdate(data);
         ExecuteOnMainThread(() =>
         {
-            if (LeaderboardManager.Instance != null)
+            if (leaderboardManager != null)
             {
-                var stats = LeaderboardManager.Instance.GetPlayerStats(pingData.playerId);
+                var stats = leaderboardManager.GetPlayerStats(pingData.playerId);
                 if (stats != null)
                     stats.UpdatePing(pingData.pingMs);
             }

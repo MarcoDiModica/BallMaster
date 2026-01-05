@@ -4,9 +4,8 @@ using UnityEngine;
 
 public class LeaderboardManager : MonoBehaviour
 {
-    public static LeaderboardManager Instance { get; private set; }
-
     private Dictionary<string, PlayerStats> playerStats = new Dictionary<string, PlayerStats>();
+    private KillFeedUI killFeedUI;
 
     private static readonly string[] randomNames = new string[]
     {
@@ -22,14 +21,7 @@ public class LeaderboardManager : MonoBehaviour
 
     void Awake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+        killFeedUI = FindFirstObjectByType<KillFeedUI>();
     }
 
     public void RegisterPlayer(string playerId)
@@ -60,11 +52,11 @@ public class LeaderboardManager : MonoBehaviour
         playerStats[killerId].AddKill();
         playerStats[victimId].AddDeath();
 
-        if (KillFeedUI.Instance != null)
+        if (killFeedUI != null)
         {
             string killerName = playerStats[killerId].playerName;
             string victimName = playerStats[victimId].playerName;
-            KillFeedUI.Instance.AddKillEntry(killerName, victimName);
+            killFeedUI.AddKillEntry(killerName, victimName);
         }
     }
 
@@ -89,9 +81,9 @@ public class LeaderboardManager : MonoBehaviour
         playerStats[data.killerId].AddKill();
         playerStats[data.victimId].AddDeath();
 
-        if (KillFeedUI.Instance != null)
+        if (killFeedUI != null)
         {
-            KillFeedUI.Instance.AddKillEntry(data.killerName, data.victimName);
+            killFeedUI.AddKillEntry(data.killerName, data.victimName);
         }
     }
 

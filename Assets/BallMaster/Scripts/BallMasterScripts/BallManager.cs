@@ -12,6 +12,8 @@ public class BallManager : MonoBehaviour
     private NetworkObjectManager networkObjectManager;
 
     private ReplicationManagerServer replicationServer;
+    private LeaderboardManager leaderboardManager;
+    private LagCompensationManager lagCompManager;
 
     public GameObject ballPrefab;
     public Transform[] ballSpawnPoints;
@@ -28,6 +30,8 @@ public class BallManager : MonoBehaviour
             networkManager.RegisterBallManager(this);
 
         replicationServer = FindFirstObjectByType<ReplicationManagerServer>();
+        leaderboardManager = FindFirstObjectByType<LeaderboardManager>();
+        lagCompManager = FindFirstObjectByType<LagCompensationManager>();
 
         if (networkManager != null && networkManager.isHost)
         {
@@ -144,12 +148,12 @@ public class BallManager : MonoBehaviour
             if (!ValidateHitWithLagCompensation(killerId, victimId, player.transform.position))
                 return;
 
-            if (LeaderboardManager.Instance != null && !string.IsNullOrEmpty(killerId) && !string.IsNullOrEmpty(victimId))
+            if (leaderboardManager != null && !string.IsNullOrEmpty(killerId) && !string.IsNullOrEmpty(victimId))
             {
-                LeaderboardManager.Instance.RegisterKill(killerId, victimId);
+                leaderboardManager.RegisterKill(killerId, victimId);
 
-                var killerStats = LeaderboardManager.Instance.GetPlayerStats(killerId);
-                var victimStats = LeaderboardManager.Instance.GetPlayerStats(victimId);
+                var killerStats = leaderboardManager.GetPlayerStats(killerId);
+                var victimStats = leaderboardManager.GetPlayerStats(victimId);
                 if (killerStats != null && victimStats != null)
                 {
                     networkManager.SendKillEvent(
@@ -179,7 +183,7 @@ public class BallManager : MonoBehaviour
 
     bool ValidateHitWithLagCompensation(string shooterId, string victimId, Vector3 currentVictimPosition)
     {
-        if (LagCompensationManager.Instance == null)
+        if (lagCompManager == null)
             return true;
 
         if (string.IsNullOrEmpty(shooterId))
@@ -191,9 +195,9 @@ public class BallManager : MonoBehaviour
         if (shooterPing <= 0)
             return true;
 
-        Vector3 historicalPosition = LagCompensationManager.Instance.GetPlayerPositionAtTime(
+        Vector3 historicalPosition = lagCompManager.GetPlayerPositionAtTime(
             victimId,
-            LagCompensationManager.Instance.ServerTime - (shooterPing / 1000f)
+            lagCompManager.ServerTime - (shooterPing / 1000f)
         );
 
         float tolerance = 3f;

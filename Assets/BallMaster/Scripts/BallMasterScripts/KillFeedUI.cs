@@ -5,8 +5,6 @@ using UnityEngine;
 
 public class KillFeedUI : MonoBehaviour
 {
-    public static KillFeedUI Instance { get; private set; }
-
     [Header("Settings")]
     public GameObject killFeedEntryPrefab;
     public Transform killFeedContainer;
@@ -15,16 +13,9 @@ public class KillFeedUI : MonoBehaviour
 
     private List<GameObject> activeEntries = new List<GameObject>();
 
-    void Awake()
+    void Start()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+        // Initialization if needed
     }
 
     public void AddKillEntry(string killerName, string victimName)

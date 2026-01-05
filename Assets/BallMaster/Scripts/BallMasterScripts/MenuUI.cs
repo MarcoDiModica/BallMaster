@@ -22,6 +22,9 @@ public class MenuUI : MonoBehaviour
 
     void Start()
     {
+        if (networkManager == null)
+            networkManager = FindFirstObjectByType<NetworkManager>();
+
         if (joinPanel != null)
             joinPanel.SetActive(false);
 

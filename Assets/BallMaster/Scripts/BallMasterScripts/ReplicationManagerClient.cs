@@ -14,6 +14,7 @@ public class ReplicationManagerClient : MonoBehaviour
 
     private PlayerManager playerManager;
     private BallManager ballManager;
+    private LeaderboardManager leaderboardManager;
 
     void Awake()
     {
@@ -21,6 +22,7 @@ public class ReplicationManagerClient : MonoBehaviour
         networkObjectManager = FindFirstObjectByType<NetworkObjectManager>();
         playerManager = FindFirstObjectByType<PlayerManager>();
         ballManager = FindFirstObjectByType<BallManager>();
+        leaderboardManager = FindFirstObjectByType<LeaderboardManager>();
     }
 
     void Start()
@@ -118,9 +120,9 @@ public class ReplicationManagerClient : MonoBehaviour
                     pc.Initialize(playerManager);
                 }
 
-                if (LeaderboardManager.Instance != null)
+                if (leaderboardManager != null)
                 {
-                    LeaderboardManager.Instance.RegisterPlayer(packet.networkId);
+                    leaderboardManager.RegisterPlayer(packet.networkId);
                 }
             }
 
