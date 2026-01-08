@@ -120,10 +120,7 @@ public class ReplicationManagerClient : MonoBehaviour
                     pc.Initialize(playerManager);
                 }
 
-                if (leaderboardManager != null)
-                {
-                    leaderboardManager.RegisterPlayer(packet.networkId);
-                }
+                // Names are synced from Host via PlayerNameSync message
             }
 
             RegisterWithSpecificManager(newObj, packet.objectType, packet.networkId);

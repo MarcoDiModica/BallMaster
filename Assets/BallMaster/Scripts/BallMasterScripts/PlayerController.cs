@@ -76,14 +76,6 @@ public class PlayerController : MonoBehaviour
     public float sprintFov = 75f;
     public float fovSpeed = 5f;
 
-    [Header("Screenshake")]
-    public float traumaDecay = 1f;
-    public float maxShakeAngle = 5f;
-    public float maxShakeOffset = 0.5f;
-    public float multiplier = 1f;
-    private float trauma = 0f;
-    private float shakeSeed;
-
     [Header("References")]
     public Transform cameraTransform;
     private Camera playerCamera;
@@ -120,7 +112,6 @@ public class PlayerController : MonoBehaviour
     private Vector3 wallNormal = Vector3.zero;
     private float lastWallTime = -10f;
     private float wallContactTime = -10f;
-    private bool hasWallJumped = false;
     private Vector3 lastWallNormalVector = Vector3.zero;
     private float lastWallJumpTimeRef = -10f;
     private bool justStoppedSliding = false;
@@ -169,8 +160,6 @@ public class PlayerController : MonoBehaviour
             if (playerCamera != null)
                 baseFov = playerCamera.fieldOfView;
         }
-
-        shakeSeed = Random.value * 100f;
     }
 
     public void Move(Vector2 inputDir)
@@ -247,7 +236,7 @@ public class PlayerController : MonoBehaviour
         if (equippedBall == null)
             return;
         
-        AddTrauma(0.4f);
+
         ThrowBall();
     }
 
@@ -265,9 +254,8 @@ public class PlayerController : MonoBehaviour
 
         if (isGrounded)
         {
-            hasWallJumped = false;
             lastGroundedTime = Time.time;
-            isJumping = false;
+            isJumping = false; 
             lastWallNormalVector = Vector3.zero;
 
             if (isWallRunning)
@@ -596,7 +584,7 @@ public class PlayerController : MonoBehaviour
 
             if (prevY < -15f && isGrounded)
             {
-                AddTrauma(0.6f);
+
             }
         }
     }
@@ -762,7 +750,7 @@ public class PlayerController : MonoBehaviour
 
         cameraTransform.localRotation = Quaternion.Euler(xRotation, 0f, newZ);
 
-        HandleScreenshake();
+        // HandleScreenshake();
 
         float targetY = defaultYPos;
 
@@ -786,14 +774,6 @@ public class PlayerController : MonoBehaviour
         camPos.y = Mathf.Lerp(camPos.y, targetY, Time.deltaTime * 10f);
         
         //Apply shake offset
-        if (trauma > 0)
-        {
-            float shake = trauma * trauma;
-            float offsetX = maxShakeOffset * shake * (Mathf.PerlinNoise(shakeSeed, Time.time * 20f) * 2f - 1f);
-            float offsetY = maxShakeOffset * shake * (Mathf.PerlinNoise(shakeSeed + 1f, Time.time * 20f) * 2f - 1f);
-            camPos.x += offsetX;
-            camPos.y += offsetY;
-        }
         
         cameraTransform.localPosition = camPos;
 
@@ -815,25 +795,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void HandleScreenshake()
-    {
-        if (trauma > 0)
-        {
-            trauma = Mathf.Clamp01(trauma - Time.deltaTime * traumaDecay);
-            float shake = trauma * trauma;
-            
-            float rotX = maxShakeAngle * shake * (Mathf.PerlinNoise(shakeSeed + 2f, Time.time * 20f) * 2f - 1f);
-            float rotY = maxShakeAngle * shake * (Mathf.PerlinNoise(shakeSeed + 3f, Time.time * 20f) * 2f - 1f);
-            float rotZ = maxShakeAngle * shake * (Mathf.PerlinNoise(shakeSeed + 4f, Time.time * 20f) * 2f - 1f);
 
-            cameraTransform.localRotation *= Quaternion.Euler(rotX, rotY, rotZ);
-        }
-    }
-
-    public void AddTrauma(float amount)
-    {
-        trauma = Mathf.Clamp01(trauma + amount * multiplier);
-    }
 
     private bool isJumpHeld = false;
 

@@ -24,13 +24,29 @@ public class LeaderboardManager : MonoBehaviour
         killFeedUI = FindFirstObjectByType<KillFeedUI>();
     }
 
-    public void RegisterPlayer(string playerId)
+    public string RegisterPlayer(string playerId)
     {
         if (!playerStats.ContainsKey(playerId))
         {
             string randomName = GenerateRandomName();
             playerStats[playerId] = new PlayerStats(playerId, randomName);
+            return randomName;
         }
+        return playerStats[playerId].playerName;
+    }
+
+    public void RegisterPlayerWithName(string playerId, string playerName, int kills = 0, int deaths = 0)
+    {
+        if (!playerStats.ContainsKey(playerId))
+        {
+            playerStats[playerId] = new PlayerStats(playerId, playerName);
+        }
+        else
+        {
+             playerStats[playerId].playerName = playerName;
+        }
+        playerStats[playerId].kills = kills;
+        playerStats[playerId].deaths = deaths;
     }
 
     public void UnregisterPlayer(string playerId)
@@ -98,6 +114,16 @@ public class LeaderboardManager : MonoBehaviour
     public int GetPlayerCount()
     {
         return playerStats.Count;
+    }
+    
+    public Dictionary<string, string> GetAllPlayerNames()
+    {
+        Dictionary<string, string> names = new Dictionary<string, string>();
+        foreach(var kvp in playerStats)
+        {
+            names[kvp.Key] = kvp.Value.playerName;
+        }
+        return names;
     }
 
     private string GenerateRandomName()

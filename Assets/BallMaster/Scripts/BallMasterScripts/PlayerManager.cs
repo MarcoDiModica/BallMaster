@@ -86,9 +86,10 @@ public class PlayerManager : MonoBehaviour
 
         players[playerId] = controller;
 
-        if (leaderboardManager != null)
+        if (leaderboardManager != null && networkManager.isHost)
         {
-            leaderboardManager.RegisterPlayer(playerId);
+            string name = leaderboardManager.RegisterPlayer(playerId);
+            networkManager.BroadcastPlayerNameSync(playerId, name);
         }
         
         if (networkManager.isHost && replicationServer != null)

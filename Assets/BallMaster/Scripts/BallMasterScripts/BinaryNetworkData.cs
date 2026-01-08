@@ -20,6 +20,16 @@ public enum MessageType : byte
     KillEvent,
     Ack,
     PingUpdate,
+    Reliable,
+    PlayerNameSync,
+}
+
+public class PlayerNameSyncData
+{
+    public string playerId;
+    public string playerName;
+    public int kills;
+    public int deaths;
 }
 
 public class PingUpdateData
@@ -457,5 +467,35 @@ public static class NetworkProtocolBinary
         }
 
         return new Quaternion(components[0], components[1], components[2], components[3]);
+    }
+
+    public static byte[] SerializePlayerNameSync(PlayerNameSyncData data)
+    {
+        return Serialize(
+            MessageType.PlayerNameSync,
+            (writer) =>
+            {
+                writer.Write(data.playerId);
+                writer.Write(data.playerName);
+                writer.Write(data.kills);
+                writer.Write(data.deaths);
+            }
+        );
+    }
+
+    public static PlayerNameSyncData DeserializePlayerNameSync(byte[] data)
+    {
+        using (MemoryStream stream = new MemoryStream(data))
+        using (BinaryReader reader = new BinaryReader(stream))
+        {
+            reader.ReadByte();
+            return new PlayerNameSyncData
+            {
+                playerId = reader.ReadString(),
+                playerName = reader.ReadString(),
+                kills = reader.ReadInt32(),
+                deaths = reader.ReadInt32(),
+            };
+        }
     }
 }

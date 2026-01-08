@@ -12,7 +12,16 @@ public class NetworkManager : MonoBehaviour
     private NetworkObjectManager networkObjectManager;
     private ReplicationManagerServer replicationServer;
     private ReplicationManagerClient replicationClient;
-    private LeaderboardManager leaderboardManager;
+    private LeaderboardManager _leaderboardManagerCache;
+    private LeaderboardManager leaderboardManager
+    {
+        get
+        {
+            if (_leaderboardManagerCache == null)
+                _leaderboardManagerCache = FindFirstObjectByType<LeaderboardManager>();
+            return _leaderboardManagerCache;
+        }
+    }
 
     [Header("Config")]
     public int port = 4567;
@@ -28,8 +37,12 @@ public class NetworkManager : MonoBehaviour
 
     private static Dictionary<string, string> codeToIPMap = new Dictionary<string, string>();
     private Dictionary<string, IPEndPoint> connectedClients = new Dictionary<string, IPEndPoint>();
-    private Dictionary<string, IPEndPoint> clientIdToEndpoint =
-        new Dictionary<string, IPEndPoint>();
+    private Dictionary<string, IPEndPoint> clientIdToEndpoint = new Dictionary<string, IPEndPoint>();
+    
+    // Reliable Channels
+    private Dictionary<string, ReliableChannel> hostReliableChannels = new Dictionary<string, ReliableChannel>();
+    private ReliableChannel clientReliableChannel;
+
     private UdpClient udpClient;
     private Thread receiveThread;
     private bool running = false;
@@ -59,11 +72,8 @@ public class NetworkManager : MonoBehaviour
 
         DontDestroyOnLoad(gameObject);
     }
-    
-    void Start()
-    {
-        leaderboardManager = FindFirstObjectByType<LeaderboardManager>();
-    }
+
+
 
     public void RegisterPlayerManager(PlayerManager pm)
     {
@@ -147,6 +157,19 @@ public class NetworkManager : MonoBehaviour
                 ResetClientState();
             }
         }
+        
+        // Update Reliable Channels
+        if (isHost)
+        {
+            foreach (var ch in hostReliableChannels.Values)
+            {
+                ch?.Update();
+            }
+        }
+        else
+        {
+            clientReliableChannel?.Update();
+        }
     }
 
     #region Host
@@ -187,6 +210,44 @@ public class NetworkManager : MonoBehaviour
         isConnected = true;
     }
 
+    public void SendToClient(string clientId, byte[] data)
+    {
+        if (clientIdToEndpoint.ContainsKey(clientId))
+        {
+             SendRawUDP(data, clientIdToEndpoint[clientId]);
+        }
+    }
+
+    void SendToAllClientsExcept(byte[] data, IPEndPoint except)
+    {
+        foreach (var client in connectedClients.Values)
+        {
+            if (client.Equals(except))
+                continue;
+
+            SendRawUDP(data, client);
+        }
+    }
+    
+    // Wrapper for Simulator (REMOVED)
+    void SendRawUDP(byte[] data, IPEndPoint target)
+    {
+        RawSendInternal(data, target);
+    }
+
+    void RawSendInternal(byte[] data, IPEndPoint target)
+    {
+        try
+        {
+            udpClient.Send(data, data.Length, target);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("Error sending: " + e.Message);
+        }
+    }
+
+    /* REPLACED BY RAW SEND
     void SendToAllClients(byte[] data)
     {
         foreach (var client in connectedClients.Values)
@@ -201,37 +262,12 @@ public class NetworkManager : MonoBehaviour
             }
         }
     }
-
-    public void SendToClient(string clientId, byte[] data)
+    */
+    void SendToAllClients(byte[] data)
     {
-        if (clientIdToEndpoint.ContainsKey(clientId))
+         foreach (var client in connectedClients.Values)
         {
-            try
-            {
-                udpClient.Send(data, data.Length, clientIdToEndpoint[clientId]);
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("Error sending to client " + clientId + ": " + e.Message);
-            }
-        }
-    }
-
-    void SendToAllClientsExcept(byte[] data, IPEndPoint except)
-    {
-        foreach (var client in connectedClients.Values)
-        {
-            if (client.Equals(except))
-                continue;
-
-            try
-            {
-                udpClient.Send(data, data.Length, client);
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("Error sending: " + e.Message);
-            }
+            SendRawUDP(data, client);
         }
     }
 
@@ -275,6 +311,12 @@ public class NetworkManager : MonoBehaviour
             
             SendJoinMessage(code);
             lastJoinSendTime = Time.time;
+            
+            // Client Reliable Channel Init
+            clientReliableChannel = new ReliableChannel(ReliableChannelSendCallback);
+            
+            // Send via ReliableChannel
+            clientReliableChannel.SendReliable(NetworkProtocolBinary.SerializeString(MessageType.Join, code), hostEndPoint);
         }
         catch (Exception e)
         {
@@ -306,6 +348,8 @@ public class NetworkManager : MonoBehaviour
         isConnected = false;
         pendingPlayerId = null;
         hostEndPoint = null;
+        clientReliableChannel = null;
+        hostReliableChannels.Clear();
 
         if (playerManager != null)
         {
@@ -326,12 +370,80 @@ public class NetworkManager : MonoBehaviour
         byte[] data = NetworkProtocolBinary.SerializeString(MessageType.Join, code);
         udpClient.Send(data, data.Length, hostEndPoint);
     }
+    
+    // Reliable Send Logic
+    void SendReliableToHost(byte[] data)
+    {
+        if (clientReliableChannel == null)
+            clientReliableChannel = new ReliableChannel(ReliableChannelSendCallback);
+            
+        clientReliableChannel.SendReliable(data, hostEndPoint);
+    }
+
+    void SendReliableToClient(string clientId, byte[] data)
+    {
+        if (!clientIdToEndpoint.ContainsKey(clientId)) return;
+        IPEndPoint target = clientIdToEndpoint[clientId];
+        
+        if (!hostReliableChannels.ContainsKey(clientId))
+            hostReliableChannels[clientId] = new ReliableChannel(ReliableChannelSendCallback);
+
+        hostReliableChannels[clientId].SendReliable(data, target);
+    }
+    
+    void SendReliableToAllClients(byte[] data)
+    {
+        foreach(var kvp in connectedClients)
+        {
+             SendReliableToClient(kvp.Key, data);
+        }
+    }
+
+    byte[] PrepareReliablePacket(byte[] innerData, IPEndPoint target, ReliableChannel channel)
+    {
+        // Let channel wrap it with Sequence
+        // But we need to define that it is a RELIABLE packet for the receiver to know
+        // The channel.SendReliable sends 'wrappedData'.
+        // We will insert a RELIABLE header byte at index 0 of the FINAL packet
+        // But ReliableChannel.cs puts Sequence at index 0,1.
+        
+        // Wait, ReliableChannel.cs logic:
+        // WrapWithSequence adds seq at 0,1.
+        // We need to add MessageType.Reliable BEFORE that? Or make MessageType.Reliable the first byte?
+        
+        // Let's modify ReliableChannel inside 'SendReliable' to just call rawSend.
+        // We need to ensure 'rawSend' adds the MessageType.Reliable header?
+        // No, standard is: [Type][Data].
+        // So for Reliable: [Type=Reliable][Sequence][InnerData]
+        
+        // ReliableChannel.WrapWithSequence creates [Seq][Data].
+        // So we need to put that INSIDE a [Type=Reliable] packet.
+        
+        // Let's redefine rawSend for ReliableChannel to NOT send raw, but send PRE-RAW
+        
+        return null; // Logic moved to specific usage
+    }
+    
+    // Correct Approach:
+    // usage: reliableChannel.SendReliable(data, target)
+    // reliableChannel calls 'rawSend(wrappedData, target)'
+    // Our 'rawSend' callback should prepend MessageType.Reliable
+    
+    void ReliableChannelSendCallback(byte[] seqData, IPEndPoint target)
+    {
+        // Prepend Reliable Header
+        byte[] finalData = new byte[seqData.Length + 1];
+        finalData[0] = (byte)MessageType.Reliable;
+        Array.Copy(seqData, 0, finalData, 1, seqData.Length);
+        
+        SendRawUDP(finalData, target);
+    }
 
     void SendToHost(byte[] data)
     {
         if (hostEndPoint != null)
         {
-            udpClient.Send(data, data.Length, hostEndPoint);
+            SendRawUDP(data, hostEndPoint);
         }
     }
 
@@ -377,6 +489,9 @@ public class NetworkManager : MonoBehaviour
 
         switch (type)
         {
+            case MessageType.PlayerNameSync:
+                HandlePlayerNameSync(data);
+                break;
             case MessageType.Join:
                 if (isHost)
                     HandleClientJoin(sender, data);
@@ -431,7 +546,55 @@ public class NetworkManager : MonoBehaviour
                 if (!isHost)
                     HandlePingUpdate(data);
                 break;
+            case MessageType.Reliable:
+                HandleReliableMessage(data, sender);
+                break;
+            case MessageType.Ack:
+                HandleAck(data, sender);
+                break;
         }
+    }
+
+    void HandleReliableMessage(byte[] data, IPEndPoint sender)
+    {
+        // Remove the Reliable header (1 byte)
+        if (data.Length < 1) return;
+        byte[] reliablePayload = new byte[data.Length - 1];
+        Array.Copy(data, 1, reliablePayload, 0, reliablePayload.Length);
+
+        // 1. Unwrap
+        byte[] innerData = ReliableChannel.UnwrapData(reliablePayload);
+        ushort seq = ReliableChannel.ExtractSequence(reliablePayload);
+
+        // 2. Send Ack
+        SendAck(seq, sender);
+
+        // 3. Process Inner
+        ProcessMessage(innerData, sender);
+    }
+
+    void HandleAck(byte[] data, IPEndPoint sender)
+    {
+        ushort seq = NetworkProtocolBinary.DeserializeAck(data);
+        if (isHost)
+        {
+            string cid = sender.ToString();
+            if (hostReliableChannels.ContainsKey(cid))
+            {
+                hostReliableChannels[cid].OnAckReceived(seq);
+            }
+        }
+        else
+        {
+            clientReliableChannel?.OnAckReceived(seq);
+        }
+    }
+
+    void SendAck(ushort seq, IPEndPoint target)
+    {
+        byte[] ackData = NetworkProtocolBinary.SerializeAck(seq);
+        // ACKs are unreliable
+        SendRawUDP(ackData, target);
     }
 
     void HandleClientJoin(IPEndPoint client, byte[] data)
@@ -442,6 +605,9 @@ public class NetworkManager : MonoBehaviour
         {
             connectedClients[clientId] = client;
             clientIdToEndpoint[clientId] = client;
+            
+            // Init Reliable Channel for this client
+            hostReliableChannels[clientId] = new ReliableChannel(ReliableChannelSendCallback);
 
             ExecuteOnMainThread(() =>
             {
@@ -456,8 +622,43 @@ public class NetworkManager : MonoBehaviour
                 {
                     replicationServer.SendInitialStateToClient(clientId);
                 }
+                
+                // Sync all existing player stats to the new client
+                if (leaderboardManager != null)
+                {
+                    foreach(var stats in leaderboardManager.GetAllStatsSorted())
+                    {
+                        SendPlayerStatsSyncToClient(clientId, stats.playerId, stats.playerName, stats.kills, stats.deaths);
+                    }
+                }
             });
         }
+    }
+
+    public void SendPlayerStatsSyncToClient(string clientId, string playerId, string playerName, int kills, int deaths)
+    {
+        PlayerNameSyncData data = new PlayerNameSyncData { playerId = playerId, playerName = playerName, kills = kills, deaths = deaths };
+        byte[] bytes = NetworkProtocolBinary.SerializePlayerNameSync(data);
+        SendReliableToClient(clientId, bytes);
+    }
+    
+    public void BroadcastPlayerNameSync(string playerId, string playerName, int kills = 0, int deaths = 0)
+    {
+        PlayerNameSyncData data = new PlayerNameSyncData { playerId = playerId, playerName = playerName, kills = kills, deaths = deaths };
+        byte[] bytes = NetworkProtocolBinary.SerializePlayerNameSync(data);
+        SendReliableToAllClients(bytes);
+    }
+
+    void HandlePlayerNameSync(byte[] data)
+    {
+        PlayerNameSyncData syncData = NetworkProtocolBinary.DeserializePlayerNameSync(data);
+        ExecuteOnMainThread(() =>
+        {
+            if (leaderboardManager != null)
+            {
+                leaderboardManager.RegisterPlayerWithName(syncData.playerId, syncData.playerName, syncData.kills, syncData.deaths);
+            }
+        });
     }
 
     void HandlePlayerTransformFromClient(byte[] data, IPEndPoint sender)
@@ -496,6 +697,7 @@ public class NetworkManager : MonoBehaviour
                 receivedFirstResponse = true;
                 isConnected = true;
                 isWaitingForConnection = false;
+                clientReliableChannel = new ReliableChannel(ReliableChannelSendCallback); // Re-ensure
                 OnConnectionSuccess?.Invoke();
             }
 
@@ -562,7 +764,8 @@ public class NetworkManager : MonoBehaviour
         if (clientIdToEndpoint.ContainsKey(clientId))
         {
             byte[] data = NetworkProtocolBinary.SerializePlayerId(playerId);
-            udpClient.Send(data, data.Length, clientIdToEndpoint[clientId]);
+            // RELIABLE
+            SendReliableToClient(clientId, data);
         }
     }
 
@@ -738,7 +941,8 @@ public class NetworkManager : MonoBehaviour
             };
 
             byte[] data = NetworkProtocolBinary.SerializePlayerRespawn(respawnData);
-            SendToClient(clientId, data);
+            // RELIABLE
+            SendReliableToClient(clientId, data);
         }
     }
 
@@ -779,7 +983,7 @@ public class NetworkManager : MonoBehaviour
         };
 
         byte[] data = NetworkProtocolBinary.SerializeKillEvent(killData);
-        SendToAllClients(data);
+        SendReliableToAllClients(data);
     }
 
     void HandleKillEvent(byte[] data)
