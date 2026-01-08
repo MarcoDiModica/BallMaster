@@ -16,6 +16,7 @@
 | **Launch Ball** | 🖱️ Left Click | Right Trigger (RT / R2) |
 | **Drop Ball** | 🖱️ Right Click | East Button (B / O) |
 | **Pause** | <kbd>Esc</kbd> | Start / Options |
+| **Leaderboard** | <kbd>Tab</kbd> | n/a |
 
 ### OTHER
 
